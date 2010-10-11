@@ -1,0 +1,282 @@
+#!/usr/bin/env python
+from math import hypot, sin, cos, pi
+
+from geometry import getDirection, pointOnLine, pointOnSegment
+
+class Rectangle(object):
+    def __init__(self, x, y, w, h):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+    
+    def collidePoint(self, x, y):
+        if self.x <= x < self.x + self.w and self.y <= y < self.y + self.h:
+            return True
+    
+    def collideCircle(self, x, y, radius):
+        ax = self.x - radius < x < self.x + self.w + radius
+        ay = self.y < y < self.y + self.h
+        bx = self.x < x < self.x + self.w
+        by = self.y - radius < y < self.y + self.h + radius
+        if bx and ay:
+            return True, self.x + self.w / 2.0, self.y + self.h / 2.0
+        elif ax and ay:
+            if x > self.x + self.w / 2.0:
+                return True, self.x + self.w, y
+            else:
+                return True, self.x, y
+        elif bx and by:
+            if y > self.y + self.h / 2.0:
+                return True, x, self.y + self.h
+            else:
+                return True, x, self.y
+        elif x < self.x and y < self.y:
+            if hypot(x - self.x, y - self.y) < radius:
+                return True, self.x, self.y
+            else:
+                return False, 0, 0
+        elif x > self.x + self.w and y < self.y:
+            if hypot(x - self.x - self.w, y - self.y) < radius:
+                return True, self.x + self.w, self.y
+            else:
+                return False, 0, 0
+        elif x > self.x + self.w and y > self.y + self.h:
+            if hypot(x - self.x - self.w, y - self.y - self.h) < radius:
+                return True, self.x + self.w, self.y + self.h
+            else:
+                return False, 0, 0
+        elif x < self.x and y > self.y + self.h:
+            if hypot(x - self.x, y - self.y - self.h) < radius:
+                return True, self.x, self.y + self.h
+            else:
+                return False, 0, 0
+        else:
+            return False, 0, 0
+    
+    def getRectangle(self):
+        """Returns x, y, w, h"""
+        return self.x, self.y, self.w, self.h
+
+class Capsule(object):
+    def __init__(self, x0, y0, x1, y1, radius):
+        self.x0 = x0
+        self.y0 = y0
+        self.x1 = x1
+        self.y1 = y1
+        self.radius = radius
+    
+    def collidePoint(self, x, y):
+        px, py = pointOnSegment(x, y, self.x0, self.y0, self.x1, self.y1)
+        if hypot(x - px, y - py) <= self.radius:
+            return True
+        return False
+    
+    def collideCircle(self, x, y, radius):
+        px, py = pointOnSegment(x, y, self.x0, self.y0, self.x1, self.y1)
+        if hypot(x - px, y - py) <= self.radius + radius:
+            return True, px, py
+        return False, px, py
+    
+    def getRectangle(self):
+        """Returns x, y, w, h"""
+        x0, x1 = sorted((self.x0, self.x1))
+        y0, y1 = sorted((self.y0, self.y1))
+        x0 -= self.radius
+        y0 -= self.radius
+        x1 += self.radius
+        y1 += self.radius
+        return x0, y0, x1 - x0, y1 - y0
+        
+
+class Circle(object):
+    def __init__(self, x, y, radius):
+        self.x = x
+        self.y = y
+        self.radius = radius
+    
+    def collidePoint(self, x, y):
+        if hypot(x - self.x, y - self.y) <= self.radius:
+            return True
+        return False
+    
+    def collideCircle(self, x, y, radius):
+        if hypot(x - self.x, y - self.y) <= self.radius + radius:
+            return True, self.x, self.y
+        return False, self.x, self.y
+    
+    def getRectangle(self):
+        """Returns x, y, w, h"""
+        return self.x - self.radius, self.y - self.radius, self.radius * 2, self.radius * 2
+
+class Donut(object):
+    def __init__(self, x, y, inRadius, outRadius):
+        self.x = x
+        self.y = y
+        self.inRadius = inRadius
+        self.outRadius = outRadius
+    
+    def collidePoint(self, x, y):
+        if self.inRadius < hypot(x - self.x, y - self.y) <= self.outRadius:
+            return True
+        return False
+    
+    def collideCircle(self, x, y, radius):
+        if self.inRadius - radius < hypot(x - self.x, y - self.y) <= self.outRadius + radius:
+            return True, self.x, self.y
+        return False, self.x, self.y
+    
+    def getRectangle(self):
+        """Returns x, y, w, h"""
+        return self.x - self.outRadius, self.y - self.outRadius, self.outRadius * 2, self.outRadius * 2
+
+class Slice(object):
+    def __init__(self, x, y, radius, angle0, angle1):
+        """Note that the x and y values are the center of the circle from which
+        the arc is derived, and that the actual area of the arc will be rather
+        far from those values.
+        """
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.angle0 = angle0
+        self.angle1 = angle1
+        self.isOffset = False
+        
+        #Ensure that the angle values are safe
+        while self.angle1 > self.angle0 + pi * 2:
+            self.angle1 -= pi * 2
+        
+        while self.angle0 > pi * 2 or self.angle1 > pi * 2:
+            self.angle0 -= pi * 2
+            self.angle1 -= pi * 2
+        
+        while self.angle0 < 0 or self.angle1 < 0:
+            self.isOffset = True
+            self.collidePoint = self.collidePointOffset
+            self.collideCircle = self.collideCircleOffset
+            self.angle0 += pi * 2
+            self.angle1 += pi * 2
+    
+    def collidePoint(self, x, y):
+        if hypot(x - self.x, y - self.y) <= self.radius:
+            if self.angle0 <= getDirection(self.x, self.y, x, y) <= self.angle1:
+                return True
+        return False
+    
+    def collidePointOffset(self, x, y):
+        if hypot(x - self.x, y - self.y) <= self.radius:
+            if self.angle0 <= getDirection(self.x, self.y, x, y) + pi*2 <= self.angle1:
+                return True
+        return False
+    
+    def collideCircle(self, x, y, radius):
+        distance = hypot(x - self.x, y - self.y)
+        if distance <= self.radius + radius:
+            u = radius / distance / 2
+            if self.angle0 - u <= getDirection(self.x, self.y, x, y) <= self.angle1 + u:
+                return True, self.x, self.y
+        return False, self.x, self.y
+    
+    def collideCircleOffset(self, x, y, radius):
+        distance = hypot(x - self.x, y - self.y)
+        if distance <= self.radius + radius:
+            u = radius / distance / 2
+            if self.angle0 - u <= getDirection(self.x, self.y, x, y) + pi*2 <= self.angle1 + u:
+                return True, self.x, self.y
+        return False, self.x, self.y
+    
+    def getRectangle(self):
+        """Returns x, y, w, h"""
+        ax = self.x + cos(self.angle0) * self.radius
+        ay = self.y + sin(self.angle0) * self.radius
+        bx = self.x + cos(self.angle0) * self.radius
+        by = self.y + sin(self.angle0) * self.radius
+        #Middle of the arc
+        cx = self.x + cos((self.angle0 + self.angle1) / 2.0) * self.radius
+        cy = self.y + sin((self.angle0 + self.angle1) / 2.0) * self.radius
+        
+        top = min(ay, by, cy)
+        down = max(ay, by, cy)
+        left = min(ax, bx, cx)
+        right = max(ax, bx, cx)
+        
+        return left, top, right - left, bottom - top
+
+class Arc(object):
+    def __init__(self, x, y, inRadius, outRadius, angle0, angle1):
+        """Note that the x and y values are the center of the circle from which
+        the arc is derived, and that the actual area of the arc will be rather
+        far from them.
+        """
+        self.x = x
+        self.y = y
+        self.inRadius = min(inRadius, outRadius)
+        self.outRadius = max(inRadius, outRadius)
+        self.angle0 = min(angle0, angle1)
+        self.angle1 = max(angle0, angle1)
+        self.isOffset = False
+        
+        #Ensure that the angle values are safe
+        while self.angle1 > self.angle0 + pi * 2:
+            self.angle1 -= pi * 2
+        
+        while self.angle0 > pi * 2 or self.angle1 > pi * 2:
+            self.angle0 -= pi * 2
+            self.angle1 -= pi * 2
+        
+        while self.angle0 < 0 or self.angle1 < 0:
+            self.isOffset = True
+            self.collidePoint = self.collidePointOffset
+            self.collideCircle = self.collideCircleOffset
+            self.angle0 += pi * 2
+            self.angle1 += pi * 2
+    
+    def collidePoint(self, x, y):
+        if self.inRadius <= hypot(x - self.x, y - self.y) <= self.outRadius:
+            if self.angle0 <= getDirection(self.x, self.y, x, y) <= self.angle1:
+                return True
+        return False
+    
+    def collidePointOffset(self, x, y):
+        if self.inRadius <= hypot(x - self.x, y - self.y) <= self.outRadius:
+            if self.angle0 <= getDirection(self.x, self.y, x, y) + pi*2 <= self.angle1:
+                return True
+        return False
+    
+    def collideCircle(self, x, y, radius):
+        distance = hypot(x - self.x, y - self.y)
+        if self.inRadius - radius <= distance <= self.outRadius + radius:
+            u = radius / distance / 2
+            if self.angle0 - u <= getDirection(self.x, self.y, x, y) <= self.angle1 + u:
+                return True, self.x, self.y
+        return False, self.x, self.y
+    
+    def collideCircleOffset(self, x, y, radius):
+        distance = hypot(x - self.x, y - self.y)
+        if self.inRadius - radius <= distance <= self.outRadius + radius:
+            u = radius / distance / 2
+            if self.angle0 - u <= getDirection(self.x, self.y, x, y) + pi*2 <= self.angle1 + u:
+                return True, self.x, self.y
+        return False, self.x, self.y
+    
+    def getRectangle(self):
+        """Returns x, y, w, h"""
+        ax = self.x + cos(self.angle0) * self.inRadius
+        ay = self.y + sin(self.angle0) * self.inRadius
+        bx = self.x + cos(self.angle0) * self.outRadius
+        by = self.y + sin(self.angle0) * self.outRadius
+        cx = self.x + cos(self.angle1) * self.outRadius
+        cy = self.y + sin(self.angle1) * self.outRadius
+        dx = self.x + cos(self.angle1) * self.inRadius
+        dy = self.y + sin(self.angle1) * self.inRadius
+        #Middle of the arc
+        ex = self.x + cos((self.angle0 + self.angle1) / 2.0) * self.outRadius
+        ey = self.y + sin((self.angle0 + self.angle1) / 2.0) * self.outRadius
+        
+        top = min(ay, by, cy, dy, ey)
+        bottom = max(ay, by, cy, dy, ey)
+        left = min(ax, bx, cx, dx, ex)
+        right = max(ax, bx, cx, dx, ex)
+        
+        return left, top, right - left, bottom - top
