@@ -9,7 +9,7 @@ COLOR1 = 255, 127, 0
 COLOR2 = 255, 0, 0
 COLOR3 = 0, 0, 0
 
-class System:
+class ParticleSystem:
     def __init__(self):
         self.particles = set()
     

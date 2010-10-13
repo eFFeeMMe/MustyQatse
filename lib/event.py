@@ -9,10 +9,11 @@ class EventHandler:
     #A tuple so that unbind and emit won't crash
     #bind will make it a dictionary, making it useful
     _eventBindings = ()
-    def register(self, event):
+    def register(self, *events):
         if type(self._eventBindings) is tuple:
             self._eventBindings = {}
-        self._eventBindings[event] = set()
+        for event in events:
+            self._eventBindings[event] = set()
     
     def bind(self, event, function):
         assert event in self._eventBindings

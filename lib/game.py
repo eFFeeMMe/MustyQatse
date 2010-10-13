@@ -97,14 +97,14 @@ class Catcher:
         self.rect.centerx = geom.x
 
 class Game(EventHandler):
-    def __init__(self):
+    def __init__(self, main):
         self.score = 0
         self.multiplier = 1.0
         self.avaibleBalls = 10
         
         self.GUI = GUI(50, 50)
         
-        self.particleSystem = particle.System()
+        self.particleSystem = particle.ParticleSystem()
         
         self.level = Level()
         
@@ -113,6 +113,14 @@ class Game(EventHandler):
         
         #Containers
         self.balls = set()
+        
+        #Event responses
+        main.bind('quit', self.lose)
+        main.bind('mouseButtonDown', self.onMousePress)
+    
+    def onMousePress(self, pos, button):
+        if button == 1:
+            self.launchBall()
     
     def start(self):
         self.level = Level()
@@ -211,15 +219,7 @@ class Game(EventHandler):
                     
                     self.particleSystem.add(particle.Explosion(ball.geom.x, ball.geom.y, 7))
     
-    def update(self, events):
-        #Handle events
-        for event in events:
-            if event.type == pygame.QUIT:
-                self.lose()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if event.button == 1:
-                    self.launchBall()
-        
+    def update(self):
         self.updateDynamics()
         
         #Update game logic

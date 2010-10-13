@@ -19,20 +19,20 @@ def sinInterpolation(start, end, steps=30):
         values.append(start + delta * sin(n))
     return values
 
-def createFromDictionary(dictionary, onSelection, backText,
-                         x, y, radius, arc=pi*2.0, defaultAngle=0.0, wrap=True, headerText="Spam"):
+def createMenuFromDict(main, dictionary, onSelection, backText, x, y, radius,
+                   arc=pi*2.0, defaultAngle=0.0, wrap=True, headerText="Spam"):
     """Creates a tree of menus from a tree of dictionaries.
     
     dictionary: string:function or string:dictionary pairs
     onSelection: the function to call on entering a subMenu
     backText: the string that appears on the menu item to go back
     """
-    menu = RotatingMenu(x, y, radius, arc, defaultAngle, wrap, headerText)
+    menu = RotatingMenu(main, x, y, radius, arc, defaultAngle, wrap, headerText)
     for k, v in dictionary.items():
         if type(v) == dict:
             #We make a sub-menu, a way to come back and a way to reach it
-            subMenu = createFromDictionary(v, onSelection, backText, x, y, radius, arc, defaultAngle, wrap, k)
-            subMenu.addItem(MenuItem(backText, lambda: onSelection(menu)))
+            sub = createMenuFromDict(main, v, onSelection, backText, x, y, radius, arc, defaultAngle, wrap, k)
+            sub.addItem(MenuItem(backText, lambda: onSelection(menu)))
             menu.addItem(MenuItem(k, lambda: onSelection(subMenu)))
         else:
             menu.addItem(MenuItem(k, v))
@@ -62,7 +62,7 @@ class Header:
         display.blit(self.image, (self.x-self.xOffset, self.y-self.yOffset))
 
 class RotatingMenu:
-    def __init__(self, x, y, radius, arc=pi*2, defaultAngle=0, wrap=True, headerText="Spam"):
+    def __init__(self, main, x, y, radius, arc=pi*2, defaultAngle=0, wrap=True, headerText="Spam"):
         """
         @param x:
             The horizontal center of this menu in pixels.
@@ -101,6 +101,19 @@ class RotatingMenu:
         self.items = []
         self.selectedItem = None
         self.selectedItemNumber = 0
+        
+        #Respond to events
+        main.bind('quit', sys.exit)
+        main.bind('keyDown', self.onKeyPress)
+    
+    def onKeyPress(self, key, mod):
+        if key == pygame.K_UP or key == pygame.K_RETURN:
+            self.selectedItem.function(*self.selectedItem.args,
+                                       **self.selectedItem.kwargs)
+        elif key == pygame.K_LEFT:
+            self.selectItem(self.selectedItemNumber + 1)
+        elif key == pygame.K_RIGHT:
+            self.selectItem(self.selectedItemNumber - 1)
     
     def addItem(self, item):
         self.items.append(item)
@@ -151,21 +164,7 @@ class RotatingMenu:
             item.x = self.x + cos(rot) * self.radius
             item.y = self.y + sin(rot) * self.radius / 2.0
     
-    def update(self, events):
-        for event in events:
-            if event.type == pygame.QUIT:
-                sys.exit()
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP or event.key == pygame.K_RETURN:
-                    self.selectedItem.function(*self.selectedItem.args,
-                                               **self.selectedItem.kwargs)
-                elif event.key == pygame.K_DOWN or event.key == pygame.K_BACKSPACE:
-                    pass
-                elif event.key == pygame.K_LEFT:
-                    self.selectItem(self.selectedItemNumber + 1)
-                elif event.key == pygame.K_RIGHT:
-                    self.selectItem(self.selectedItemNumber - 1)
-        
+    def update(self):
         if len(self.rotationSteps) > 0:
             self.rotation = self.rotationSteps.pop(0)
             self.rotate(self.rotation)

@@ -4,71 +4,112 @@ from random import choice
 
 import pygame
 
-from lib import menu
-from lib.game import Game
-#from lib.editor import Editor
 from lib import text
+from lib.menu import createMenuFromDict
+from lib.event import EventHandler
+from lib.game import Game
+from lib.editor import Editor
 
-class Main:
+class Main(EventHandler):
     def __init__(self):
+        #First off, init Pygame
         pygame.init()
-        text.loadLanguage("en-US")
         
         self.display = pygame.display.set_mode((640, 480))
         self.clock = pygame.time.Clock()
         
-        noAction = lambda: "huh"
+        #Then the custom event handling
+        self.events = [      #Arguments:
+            'keyDown',         #unicode, key, mod
+            'keyUp',           #key, mod
+            'mouseMotion',     #pos, rel, buttons
+            'mouseButtonDown', #pos, button
+            'mouseButtonUp',   #pos, button
+            'quit',            #no variables
+            ]
         
-        m = {
+        self.register(*self.events)
+        
+        #Then the crappy language features
+        text.loadLanguage("en-US")
+                
+        #Then the main menu
+        noAction = lambda: "huh"
+        menuItems = {
             "Exit": self.menuExit,
             "Options": {
                 "Resolution": noAction,
                 "FPS Limit": noAction,
-                },
+            },
             "Start": self.menuGame,
             "Levels": noAction,
             "Editor": {
                 "New Level": noAction,
                 "Load Level": noAction,
-                },
-            }
+            },
+        }
         
-        self.menu = menu.createFromDictionary(m, self.menuSelect, "Back",
-                         320, 240, 270, pi, pi/2.0, False, "Mustyqatse")
-        
-        #self.editor = Editor()
-        #self.editor.back = self.menuBack
-        
-        self.game = Game()
-        self.game.win = self.win
-        self.game.lose = self.lose
+        self.menu = createMenuFromDict(self, menuItems, self.menuSelect,
+                        "Back", 320, 240, 270, pi, pi/2.0, False, "Mustyqatse")
         
         self.context = self.menu
-        
-        #Loop
+    
+    def loop(self):
         while True:
-            events = pygame.event.get()
-            
-            self.context.update(events)
-            
+            for e in pygame.event.get():
+                if e.type == pygame.KEYDOWN:
+                    self.emit('keyDown', e.key, e.mod)
+                elif e.type == pygame.KEYUP:
+                    self.emit('keyUp', e.key, e.mod)
+                elif e.type == pygame.MOUSEMOTION:
+                    self.emit('mouseMotion', e.pos, e.rel, e.buttons)
+                elif e.type == pygame.MOUSEBUTTONDOWN:
+                    self.emit('mouseButtonDown', e.pos, e.button)
+                elif e.type == pygame.MOUSEBUTTONUP:
+                    self.emit('mouseButtonUp', e.pos, e.button)
+                elif e.type == pygame.JOYAXISMOTION:
+                    pass
+                elif e.type == pygame.JOYBALLMOTION:
+                    pass
+                elif e.type == pygame.JOYHATMOTION:
+                    pass
+                elif e.type == pygame.JOYBUTTONUP:
+                    pass
+                elif e.type == pygame.JOYBUTTONDOWN:
+                    pass
+                elif e.type == pygame.VIDEORESIZE:
+                    pass
+                elif e.type == pygame.VIDEOEXPOSE:
+                    pass
+                elif e.type == pygame.ACTIVEEVENT:
+                    pass
+                elif e.type == pygame.QUIT:
+                    self.emit('quit')
+                
+            self.context.update()
             self.context.draw(self.display)
             
             pygame.display.flip() #Show the updated scene
-            self.clock.tick(90) #Wait a little to keep the fps steady
+            self.clock.tick(60) #Wait a little to keep the fps steady
     
     #Menu
     def menuSelect(self, menu):
         self.context = menu
     
     def menuGame(self):
-        self.context = self.game
-        self.game.start()
+        game = Game(self)
+        game.win = self.win
+        game.lose = self.lose
+        self.context = game
+        game.start()
     
     def menuLevels(self):
         pass
     
     def menuEditor(self):
-        pass#self.context = self.editor
+        editor = Editor(self)
+        editor.back = self.menuBack
+        self.context = editor
     
     def menuExit(self):
         return sys.exit()
@@ -102,4 +143,5 @@ class Main:
         #self.menuItem0.redrawText()
 
 if __name__ == "__main__":
-    Main()
+    main = Main()
+    main.loop()

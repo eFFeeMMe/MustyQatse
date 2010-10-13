@@ -83,82 +83,7 @@ class Circle:
             y = self.y + sin(direction) * self.outRadius
             pygame.draw.circle(display, COLOR4, (x, y), 2)
 
-class EditorView:
-    def __init__(self):
-        self.level = Level()
-    
-    def update(self, events):
-        #Handle events
-        for event in events:
-            if event.type == pygame.MOUSEMOTION:
-                self.mx, self.my = pygame.mouse.get_pos()
-                self.getHoveredPlan()
-                if self.hoveredPlanTouched:
-                    if self.snap:
-                        self.mx, self.my = self.hoveredPlan.snap(self.mx, self.my)
-                    else:
-                        self.mx = self.hoveredPlanPx
-                        self.my = self.hoveredPlanPy
-                self.modes[self.mode].mouseMove(self.mx, self.my)
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                self.modes[self.mode].mousePress(event.button)
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_F1:
-                    self.mode = MODE_PLAN
-                elif event.key == pygame.K_F2:
-                    self.mode = MODE_OBJECT
-                else:
-                    self.modes[self.mode].keyPress(event.key)
-            elif event.type == pygame.QUIT:
-                self.back()
-    
-    def mouseMove(self, mx, my):
-        self.edit(mx, my)
-    
-    def mousePress(self, button):
-        if button == 1:
-            self.place()
-        elif button == 3:
-            self.remove()
-        elif button == 4:
-            if self.preview:
-                self.preview.subdivisions += 1
-        elif button == 5:
-            if self.preview and self.preview.subdivisions > 1:
-                self.preview.subdivisions -= 1
-    
-    def keyPress(self, key):
-        if key == pygame.K_F1:
-            self.mode = PLAN_TYPE_LINE
-        elif key == pygame.K_F2:
-            self.mode = PLAN_TYPE_CIRCLE
-        elif key == pygame.K_F4:
-            self.mode = PLACE_TYPE_RECTANGLE
-        elif key == pygame.K_F5:
-            self.mode = PLACE_TYPE_CIRCLE
-        elif key == pygame.K_F6:
-            self.mode = PLACE_TYPE_ARC
-    
-    
-    def draw(self):
-        if self.preview:
-            self.preview.draw(display)
-            #subdivisions label
-            image = self.font.render(str(self.preview.subdivisions), True, COLOR3)
-            w, h = self.font.size(str(self.preview.subdivisions))
-            display.blit(image, (self.mx - w, self.my - h))
-        
-        for block in self.level.blocks:
-            block.draw(display)
-        for plan in self.level.plans:
-            plan.draw(display)
-        
-        self.modes[self.mode].draw(display)
-        if self.hoveredPlanTouched:
-            display.blit(self.hoveredPlan.hitImage, self.hoveredPlan.rect)
-            pygame.draw.circle(display, COLOR1, (self.mx, self.my), 2)
-
-class EditorControl:
+class Editor: #In MVC terms, Level is the model, Editor is the control
     def __init__(self):
         self.planMode = PlanMode(self)
         self.objectMode = ObjectMode(self)
@@ -283,3 +208,77 @@ class EditorControl:
                 self.editor.level.blocks.remove(block)
                 self.editor.level.quadTree.remove(block)
                 break #Remove only one item at a time
+
+class EditorView:
+    def __init__(self):
+        self.level = Level()
+    
+    def update(self, events):
+        #Handle events
+        for event in events:
+            if event.type == pygame.MOUSEMOTION:
+                self.mx, self.my = pygame.mouse.get_pos()
+                self.getHoveredPlan()
+                if self.hoveredPlanTouched:
+                    if self.snap:
+                        self.mx, self.my = self.hoveredPlan.snap(self.mx, self.my)
+                    else:
+                        self.mx = self.hoveredPlanPx
+                        self.my = self.hoveredPlanPy
+                self.modes[self.mode].mouseMove(self.mx, self.my)
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                self.modes[self.mode].mousePress(event.button)
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_F1:
+                    self.mode = MODE_PLAN
+                elif event.key == pygame.K_F2:
+                    self.mode = MODE_OBJECT
+                else:
+                    self.modes[self.mode].keyPress(event.key)
+            elif event.type == pygame.QUIT:
+                self.back()
+    
+    def mouseMove(self, mx, my):
+        self.edit(mx, my)
+    
+    def mousePress(self, button):
+        if button == 1:
+            self.place()
+        elif button == 3:
+            self.remove()
+        elif button == 4:
+            if self.preview:
+                self.preview.subdivisions += 1
+        elif button == 5:
+            if self.preview and self.preview.subdivisions > 1:
+                self.preview.subdivisions -= 1
+    
+    def keyPress(self, key):
+        if key == pygame.K_F1:
+            self.mode = PLAN_TYPE_LINE
+        elif key == pygame.K_F2:
+            self.mode = PLAN_TYPE_CIRCLE
+        elif key == pygame.K_F4:
+            self.mode = PLACE_TYPE_RECTANGLE
+        elif key == pygame.K_F5:
+            self.mode = PLACE_TYPE_CIRCLE
+        elif key == pygame.K_F6:
+            self.mode = PLACE_TYPE_ARC
+    
+    def draw(self):
+        if self.preview:
+            self.preview.draw(display)
+            #subdivisions label
+            image = self.font.render(str(self.preview.subdivisions), True, COLOR3)
+            w, h = self.font.size(str(self.preview.subdivisions))
+            display.blit(image, (self.mx - w, self.my - h))
+        
+        for block in self.level.blocks:
+            block.draw(display)
+        for plan in self.level.plans:
+            plan.draw(display)
+        
+        self.modes[self.mode].draw(display)
+        if self.hoveredPlanTouched:
+            display.blit(self.hoveredPlan.hitImage, self.hoveredPlan.rect)
+            pygame.draw.circle(display, COLOR1, (self.mx, self.my), 2)
