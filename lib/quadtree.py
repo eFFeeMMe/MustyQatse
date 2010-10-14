@@ -167,13 +167,29 @@ class QuadTree(object):
             self.items.remove(item)
         else:
             if in_nw and self.nw:
-                    self.nw.remove(item)
+                self.nw.remove(item)
             if in_ne and self.ne:
-                    self.ne.remove(item)
+                self.ne.remove(item)
             if in_se and self.se:
-                    self.se.remove(item)
+                self.se.remove(item)
             if in_sw and self.sw:
-                    self.sw.remove(item)
+                self.sw.remove(item)
+    
+    def hitPoint(self, x, y):
+        # Find the hits at the current level.
+        hits = set(item for item in self.items if item.rect.collidepoint((x, y)))
+        
+        # Recursively check the lower quadrants.
+        if self.nw and x <= self.cx and y <= self.cy:
+            hits |= self.nw.hitPoint(x, y)
+        if self.sw and x <= self.cx and y >= self.cy:
+            hits |= self.sw.hitPoint(x, y)
+        if self.ne and x >= self.cx and y <= self.cy:
+            hits |= self.ne.hitPoint(x, y)
+        if self.se and x >= self.cx and y >= self.cy:
+            hits |= self.se.hitPoint(x, y)
+        
+        return hits
     
     def hit(self, rect):
         """Returns the items that overlap a bounding rectangle.
@@ -186,7 +202,7 @@ class QuadTree(object):
             must be a pyGame Rect, or an object having one as its rect attribute.
         """
         # Find the hits at the current level.
-        hits = set([self.items[n] for n in rect.collidelistall(self.items)])
+        hits = set(self.items[n] for n in rect.collidelistall(self.items))
         
         # Recursively check the lower quadrants.
         if self.nw and rect.left <= self.cx and rect.top <= self.cy:
@@ -201,6 +217,7 @@ class QuadTree(object):
         return hits
     
     def clear(self):
+        self.items = []
         self.nw = None
         self.sw = None
         self.ne = None

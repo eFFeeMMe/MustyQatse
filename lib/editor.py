@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-import sys
 from math import cos, sin, pi, hypot
 
 import pygame
 
 import render
 from level import Level
-from geometry import getDirection, pointOnSegment, pointOnCircle, Circle, Capsule, Rectangle, Arc
+from geometry import getDirection, pointOnSegment, pointOnCircle, \
+                     Circle, Capsule, Rectangle, Arc
 
 class Line:
     def __init__(self, x0, y0, x1, y1):
@@ -38,16 +38,6 @@ class Line:
         x = self.x0 + (self.x1 - self.x0) / self.length * snapDistance
         y = self.y0 + (self.y1 - self.y0) / self.length * snapDistance
         return x, y
-    
-    def draw(self, display):
-        pygame.draw.line(display, COLOR4, (self.x0, self.y0), (self.x1, self.y1))
-        
-        dx = self.x1 - self.x0
-        dy = self.y1 - self.y0
-        for i in range(int(self.subdivisions) + 1):
-            x = self.x0 + dx * (i / self.subdivisions)
-            y = self.y0 + dy * (i / self.subdivisions)
-            pygame.draw.circle(display, COLOR4, (x, y), 2)
 
 class Circle:
     def __init__(self, x, y):
@@ -59,7 +49,7 @@ class Circle:
         
         self.rect = pygame.Rect(self.x - r, self.y - r, self.x + r, self.y + r)
     
-    def snap(self, x, y):
+    def snapToPoint(self, x, y):
         direction = getDirection(self.x, self.y, x, y)
         increment = pi * 2 / self.subdivisions
         decrement = direction % increment
@@ -72,83 +62,84 @@ class Circle:
         return x, y
     
     def pointDistance(self, x, y):
-        return sqrt((x - self.x) ** 2 + (y - self.y) ** 2)
+        return hypot(x - self.x, y - self.y)
+
+def drawLine(display, line):
+    pygame.draw.line(display, COLOR4, (line.x0, line.y0), (line.x1, line.y1))
     
-    def draw(self, display):
-        pygame.draw.circle(display, COLOR4, (self.x, self.y), self.radius, 1)
-        
-        for i in range(self.subdivisions):
-            direction = self.direction + (i / self.subdivisions) * pi * 2
-            x = self.x + cos(direction) * self.outRadius
-            y = self.y + sin(direction) * self.outRadius
-            pygame.draw.circle(display, COLOR4, (x, y), 2)
+    dx = line.x1 - line.x0
+    dy = line.y1 - line.y0
+    for i in range(int(line.subdivisions) + 1):
+        x = line.x0 + dx * (i / line.subdivisions)
+        y = line.y0 + dy * (i / line.subdivisions)
+        pygame.draw.circle(display, COLOR4, (x, y), 2)
+
+def drawCircle(display, circle):
+    pygame.draw.circle(display, COLOR4, (circle.x, circle.y), circle.radius, 1)
+    
+    for i in range(circle.subdivisions):
+        direction = circle.direction + (i / circle.subdivisions) * pi * 2
+        x = circle.x + cos(direction) * circle.outRadius
+        y = circle.y + sin(direction) * circle.outRadius
+        pygame.draw.circle(display, COLOR4, (x, y), 2)
 
 class Editor: #In MVC terms, Level is the model, Editor is the control
-    def __init__(self):
-        self.planMode = PlanMode(self)
-        self.objectMode = ObjectMode(self)
-        self.mode = self.planMode
-        
+    def __init__(self, main):
+        #Current editing process
+        self.process = None
         self.step = 0
+        
         self.preview = None
         
-        self.mx = 0
-        self.my = 0
-        self.mb = 0 #mouse button
+        #Interaction modes
+        self.snapModes = ['grid', 'subdivision', 'projection']
+        self.snapSet = [Line, Circle]
+        self.selectSet = [Line, Circle]
         
-        self.snap = True
+        #Subjects of interaction.
+        self.snapX = 0.0
+        self.snapY = 0.0
+        self.snapped = None #a Plan
+        self.hovered = None #a Block
+        self.selection = [] #a Block
         
-        self.selectionBias = [Line, Circle] #Which gets selected when in doubt
-        
-        self.hoveredPlan = None
-        self.hoveredPlanPx = 0.0 #Projection position
-        self.hoveredPlanPy = 0.0
-        self.hoveredPlanTouched = False
+        #Event handling
+        #main.bind('event', callback)
     
     def getHoveredPlan(self):
-        hits = self.level.planTree.hit(pygame.Rect(self.mx-2, self.my-2, 4, 4))
+        hits = list(block for block \
+                    in self.level.quadTree.hit(pygame.Rect(pos[0]-2, pos[1]-2, 4, 4)) \
+                    if (type(block) in self.selectSet))
         if hits:
-            candidates = list((self.preferenceValues[plan.__class__], plan) for plan in hits if plan.collidePoint(self.mx, self.my))
-            if candidates:
-                candidates.sort()
-                plan = candidates[0][1]
-                if plan.__class__ == Point:
-                    x, y = plan.x, plan.y
-                elif plan.__class__ == Line:
-                    x, y = pointOnSegment(self.mx, self.my, plan.x0, plan.y0, plan.x1, plan.y1)
-                elif plan.__class__ == Circle:
-                    x, y = pointOnCircle(self.mx, self.my, plan.x, plan.y, plan.radius)
-                self.hoveredPlan = plan
-                self.hoveredPlanPx = x
-                self.hoveredPlanPy = y
-                self.hoveredPlanTouched = True
+            candidate = hits[0]
+            if candidate.collidePoint(*pos): #mousepos
+                self.hovered = candidate
             else:
-                self.hoveredPlanTouched = False
+                self.hovered = None
         else:
-            self.hoveredPlanTouched = False
+            self.hovered = None
     
-    def place(self):
-        if self.mode == PLAN_TYPE_LINE:
-            if self.step == 0:
-                self.preview = Line(self.mx, self.my, self.mx, self.my)
-                self.step = 1
-            elif self.step == 1:
-                self.preview.finalize()
-                self.editor.level.plans.add(self.preview)
-                self.editor.level.planTree.insert(self.preview)
-                self.preview = None
-                self.step = 0
-        
-        elif self.mode == PLAN_TYPE_CIRCLE:
-            if self.step == 0:
-                self.preview = Circle(self.mx, self.my)
-                self.step = 1
-            elif self.step == 1:
-                self.preview.finalize()
-                self.editor.level.plans.add(self.preview)
-                self.editor.level.planTree.insert(self.preview)
-                self.preview = None
-                self.step = 0
+    def processPlanLine(self):
+        if self.step == 0:
+            self.preview = Line(self.mx, self.my, self.mx, self.my)
+            self.step = 1
+        elif self.step == 1:
+            self.preview.finalize()
+            self.editor.level.plans.add(self.preview)
+            self.editor.level.planTree.insert(self.preview)
+            self.preview = None
+            self.step = 0
+    
+    def processPlanCircle(self):
+        if self.step == 0:
+            self.preview = Circle(self.mx, self.my)
+            self.step = 1
+        elif self.step == 1:
+            self.preview.finalize()
+            self.editor.level.plans.add(self.preview)
+            self.editor.level.planTree.insert(self.preview)
+            self.preview = None
+            self.step = 0
     
     def edit(self, mx, my):
         if self.preview:
@@ -156,8 +147,7 @@ class Editor: #In MVC terms, Level is the model, Editor is the control
                 self.preview.x1 = mx
                 self.preview.y1 = my
             elif self.mode == PLAN_TYPE_CIRCLE:
-                self.preview.direction = getDirection(self.preview.x, self.preview.y,
-                                                      mx, my)
+                self.preview.direction = getDirection(self.preview.x, self.preview.y, mx, my)
             self.preview.refresh()
     
     def remove(self, mx, my):
@@ -172,19 +162,23 @@ class Editor: #In MVC terms, Level is the model, Editor is the control
             self.preview = None
             self.step = 0
     
-    def mouseMove(self, mx, my):
+    def onMouseMotion(self, mx, my):
         self.mx = mx
         self.my = my
     
-    def mousePress(self, button):
-        self.mb = button
-        
+    def onMouseButtonDown(self, pos, button):
         if button == 1:
             self.place()
+        elif button == 2:
+            pass
         elif button == 3:
-            self.remove()
+            self.deleteSelection()
+        elif button == 4:
+            pass
+        elif button == 5:
+            pass
     
-    def place(self):
+    def processPlaceRect(self):
         #UNWORKING
         if self.editor.hoveredPlanTouched:
             s = self.selection
@@ -201,13 +195,10 @@ class Editor: #In MVC terms, Level is the model, Editor is the control
                 elif self.mode == PLACE_TYPE_ARC:
                     pass
     
-    def remove(self):
-        hits = self.editor.level.quadTree.hit(pygame.Rect(self.mx-2, self.my-2, 4, 4))
-        for block in hits:
-            if block.collidePoint(self.mx, self.my):
-                self.editor.level.blocks.remove(block)
-                self.editor.level.quadTree.remove(block)
-                break #Remove only one item at a time
+    def deleteSelection(self):
+        if self.selection:
+            self.level.blocks.remove(self.selection)
+            self.level.quadTree.remove(self.selection)
 
 class EditorView:
     def __init__(self):
@@ -254,22 +245,20 @@ class EditorView:
                 self.preview.subdivisions -= 1
     
     def keyPress(self, key):
-        if key == pygame.K_F1:
-            self.mode = PLAN_TYPE_LINE
-        elif key == pygame.K_F2:
-            self.mode = PLAN_TYPE_CIRCLE
-        elif key == pygame.K_F4:
-            self.mode = PLACE_TYPE_RECTANGLE
-        elif key == pygame.K_F5:
-            self.mode = PLACE_TYPE_CIRCLE
-        elif key == pygame.K_F6:
-            self.mode = PLACE_TYPE_ARC
+        self.keyBindings = {
+            pygame.K_F1: PLAN_TYPE_LINE,
+            pygame.K_F2: PLAN_TYPE_CIRCLE,
+            pygame.K_F4: PLACE_TYPE_RECTANGLE,
+            pygame.K_F5: PLACE_TYPE_CIRCLE,
+            pygame.K_F6: PLACE_TYPE_ARC,
+        }
+        self.mode = self.keyBindings[key]
     
     def draw(self):
         if self.preview:
             self.preview.draw(display)
             #subdivisions label
-            image = self.font.render(str(self.preview.subdivisions), True, COLOR3)
+            image = render.string(str(self.preview.subdivisions), COLOR3)
             w, h = self.font.size(str(self.preview.subdivisions))
             display.blit(image, (self.mx - w, self.my - h))
         
@@ -278,7 +267,7 @@ class EditorView:
         for plan in self.level.plans:
             plan.draw(display)
         
-        self.modes[self.mode].draw(display)
+        self.mode.draw(display)
         if self.hoveredPlanTouched:
             display.blit(self.hoveredPlan.hitImage, self.hoveredPlan.rect)
             pygame.draw.circle(display, COLOR1, (self.mx, self.my), 2)

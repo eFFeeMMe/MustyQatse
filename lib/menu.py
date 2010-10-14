@@ -33,7 +33,7 @@ def createMenuFromDict(main, dictionary, onSelection, backText, x, y, radius,
             #We make a sub-menu, a way to come back and a way to reach it
             sub = createMenuFromDict(main, v, onSelection, backText, x, y, radius, arc, defaultAngle, wrap, k)
             sub.addItem(MenuItem(backText, lambda: onSelection(menu)))
-            menu.addItem(MenuItem(k, lambda: onSelection(subMenu)))
+            menu.addItem(MenuItem(k, lambda: onSelection(sub)))
         else:
             menu.addItem(MenuItem(k, v))
     return menu
