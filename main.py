@@ -67,22 +67,6 @@ class Main(EventHandler):
                     self.emit('mouseButtonDown', e.pos, e.button)
                 elif e.type == pygame.MOUSEBUTTONUP:
                     self.emit('mouseButtonUp', e.pos, e.button)
-                elif e.type == pygame.JOYAXISMOTION:
-                    pass
-                elif e.type == pygame.JOYBALLMOTION:
-                    pass
-                elif e.type == pygame.JOYHATMOTION:
-                    pass
-                elif e.type == pygame.JOYBUTTONUP:
-                    pass
-                elif e.type == pygame.JOYBUTTONDOWN:
-                    pass
-                elif e.type == pygame.VIDEORESIZE:
-                    pass
-                elif e.type == pygame.VIDEOEXPOSE:
-                    pass
-                elif e.type == pygame.ACTIVEEVENT:
-                    pass
                 elif e.type == pygame.QUIT:
                     self.emit('quit')
                 
@@ -124,23 +108,11 @@ class Main(EventHandler):
     #Game
     def win(self):
         self.context = self.menu
-        
         self.menu.header.text = choice(text.getSection("WinStrings"))
-        self.menu.header.redrawText()
-        #self.menuItem2.text = text.getString("Menu", "continue")
-        #self.menuItem2.redrawText()
-        #self.menuItem0.text = text.getString("Menu", "exitWin")
-        #self.menuItem0.redrawText()
     
     def lose(self):
         self.context = self.menu
-        
         self.menu.header.text = choice(text.getSection("LoseStrings"))
-        self.menu.header.redrawText()
-        #self.menuItem2.text = text.getString("Menu", "continue")
-        #self.menuItem2.redrawText()
-        #self.menuItem0.text = text.getString("Menu", "exitLose")
-        #self.menuItem0.redrawText()
 
 if __name__ == "__main__":
     main = Main()

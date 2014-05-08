@@ -38,30 +38,43 @@ def createMenuFromDict(main, dictionary, onSelection, backText, x, y, radius,
             menu.addItem(MenuItem(k, v))
     return menu
 
-class Header:
+class Header(object):
     def __init__(self, x, y, text, color=COLOR1):
         self.x = x
         self.y = y
-        self.text = text
-        self.color = color
-        
+        self._text = text
+        self._color = color
         self.font = pygame.font.Font(None, 38)
-        self.image = self.font.render(self.text, True, self.color)
-        size = self.font.size(self.text)
-        
-        self.xOffset = size[0] / 2
-        self.yOffset = size[1] / 2
+        self.redraw()
     
-    def redrawText(self):
-        self.image = self.font.render(self.text, True, self.color)
-        size = self.font.size(self.text)
+    @property
+    def text(self):
+        return self._text
+    
+    @text.setter
+    def text(self, value):
+        self._text = value
+        self.redraw()
+    
+    @property
+    def color(self):
+        return self._color
+    
+    @color.setter
+    def color(self, value):
+        self._color = value
+        self.redraw()
+    
+    def redraw(self):
+        self.image = self.font.render(self._text, True, self._color)
+        size = self.font.size(self._text)
         self.xOffset = size[0] / 2
         self.yOffset = size[1] / 2
     
     def draw(self, display):
         display.blit(self.image, (self.x-self.xOffset, self.y-self.yOffset))
 
-class RotatingMenu:
+class RotatingMenu(object):
     def __init__(self, main, x, y, radius, arc=pi*2, defaultAngle=0, wrap=True, headerText="Spam"):
         """
         @param x:
@@ -175,40 +188,51 @@ class RotatingMenu:
         for item in self.items:
             item.draw(display)
 
-class MenuItem:
+class MenuItem(object):
     def __init__(self, text="Spam", function=None, args=[], kwargs={}):
-        self.text = text
+        self._text = text
+        self.defaultColor = COLOR1
+        self.selectedColor = COLOR3
+        self._color = self.defaultColor
         
         self.function = function
         self.args = args
         self.kwargs = kwargs
         
-        self.defaultColor = COLOR1
-        self.selectedColor = COLOR3
-        self.color = self.defaultColor
-        
-        self.x = 0
-        self.y = 0 #The menu will edit these
+        self.x = 0.
+        self.y = 0. #The menu will edit these
         
         self.font = pygame.font.Font(None, 28)
-        self.image = self.font.render(self.text, True, self.color)
-        size = self.font.size(self.text)
-        self.xOffset = size[0] / 2
-        self.yOffset = size[1] / 2
+        
+        self.redraw()
     
     def select(self):
-        """Just visual stuff"""
         self.color = self.selectedColor
-        self.redrawText()
     
     def deselect(self):
-        """Just visual stuff"""
         self.color = self.defaultColor
-        self.redrawText()
+        
+    @property
+    def text(self):
+        return self._text
     
-    def redrawText(self):
-        self.image = self.font.render(self.text, True, self.color)
-        size = self.font.size(self.text)
+    @text.setter
+    def text(self, value):
+        self._text = value
+        self.redraw()
+    
+    @property
+    def color(self):
+        return self._color
+    
+    @color.setter
+    def color(self, value):
+        self._color = value
+        self.redraw()
+    
+    def redraw(self):
+        self.image = self.font.render(self._text, True, self._color)
+        size = self.font.size(self._text)
         self.xOffset = size[0] / 2
         self.yOffset = size[1] / 2
     

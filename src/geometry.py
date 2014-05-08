@@ -45,7 +45,7 @@ def circleFromRect(rect):
 
 def trilateration(Ax, Ay, Bx, By, Cx, Cy):
     """Returns the circle which intersects A B and C"""
-    pass
+    raise NotImplementedError
 
 """Primitives
 
