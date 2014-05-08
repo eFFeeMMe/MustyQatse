@@ -55,7 +55,7 @@ class Explosion:
             self.color[i] = self.startColor[i] * (1 - a) + self.endColor[i] * a
     
     def draw(self, display):
-        pygame.draw.circle(display, self.color, (self.x, self.y), self.radius, 1)
+        pygame.draw.circle(display, self.color, (int(self.x), int(self.y)), int(self.radius), 1)
 
 class Text:
     def __init__(self, x, y, text, color=COLOR3):

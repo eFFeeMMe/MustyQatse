@@ -4,11 +4,11 @@ from random import choice
 
 import pygame
 
-from lib import text
-from lib.menu import createMenuFromDict
-from lib.event import EventHandler
-from lib.game import Game
-from lib.editor import Editor
+from src import text
+from src.menu import createMenuFromDict
+from src.event import EventHandler
+from src.game import Game
+from src.editor import Editor
 
 class Main(EventHandler):
     def __init__(self):
