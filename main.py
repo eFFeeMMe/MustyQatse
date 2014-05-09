@@ -12,7 +12,6 @@ from src.editor import Editor
 
 class Main(EventHandler):
     def __init__(self):
-        #First off, init Pygame
         pygame.init()
         
         self.display = pygame.display.set_mode((640, 480))
@@ -30,11 +29,8 @@ class Main(EventHandler):
         
         self.register(*self.events)
         
-        #Then the crappy language features
-        text.loadLanguage("en-US")
-                
         #Then the main menu
-        noAction = lambda: "huh"
+        noAction = lambda: None
         menuItems = {
             "Exit": self.menuExit,
             "Options": {
@@ -108,11 +104,11 @@ class Main(EventHandler):
     #Game
     def win(self):
         self.context = self.menu
-        self.menu.header.text = choice(text.getSection("WinStrings"))
+        self.menu.header.text = choice(text.on_win)
     
     def lose(self):
         self.context = self.menu
-        self.menu.header.text = choice(text.getSection("LoseStrings"))
+        self.menu.header.text = choice(text.on_lose)
 
 if __name__ == "__main__":
     main = Main()
