@@ -1,8 +1,8 @@
-from math import sqrt, hypot, sin, cos, pi
+from math import sqrt, hypot, sin, cos, pi, atan2
 
 import pygame
 
-from geometry import getDirection, pointOnLine, Circle, Capsule, Rectangle, Arc
+from geometry import point_on_line, Circle, Capsule, Rectangle, Arc
 import render
 import particle
 from event import EventHandler
@@ -38,16 +38,16 @@ class GUI:
         display.blit(self.scoreImage, (self.x, self.y))
         display.blit(self.ballsImage, (self.x, self.y+30))
 
-class Ball:
+class Ball(object):
     maxBumps = 64
-    def __init__(self, x, y, radius):
+    def __init__(self, x, y, r):
         self.bumps = 0
         
-        self.geom = geom = Circle(x, y, radius)
+        self.geom = geom = Circle(x, y, r)
         geom.xPrev = x
         geom.yPrev = y
         
-        self.rect = geom.rect
+        self.rect = pygame.Rect(geom.aabb)
         self.image = render.silhouette(geom, COLOR3, True)
     
     def accelerate(self, multiplier):
@@ -75,20 +75,20 @@ class Ball:
         self.rect.center = geom.x, geom.y
 
 class Emitter:
-    def __init__(self, x, y, radius=12):
-        self.geom = Circle(x, y, radius)
-        self.rect = self.geom.rect
+    def __init__(self, x, y, r=12):
+        self.geom = Circle(x, y, r)
+        self.rect = pygame.Rect(self.geom.aabb)
         self.image = render.silhouette(self.geom, COLOR3, True)
 
 class Catcher:
-    def __init__(self, x, y, inRadius, outRadius, angle0, angle1):
-        geom = self.geom = Arc(x, y, inRadius, outRadius, angle0, angle1)
+    def __init__(self, x, y, r0, r1, angle0, angle1):
+        geom = self.geom = Arc(x, y, r0, r1, angle0, angle1)
         geom.xPrev = x
         geom.yPrev = y
         
         self.fix = 0.1
         
-        self.rect = geom.rect
+        self.rect = pygame.Rect(geom.aabb)
         self.image = render.silhouette(geom, COLOR3, True)
     
     def update(self):
@@ -187,13 +187,13 @@ class Game(EventHandler):
         for ball in self.balls:
             ball.update()
             ballG = ball.geom
-            if ballG.x < ballG.radius or ballG.x + ballG.radius > self.level.w:
+            if ballG.x < ballG.r or ballG.x + ballG.r > self.level.w:
                 ballG.x, ballG.xPrev = ballG.xPrev, ballG.x
             for block in self.level.quadTree.hit(ball.rect):
-                collision, cx, cy = block.geom.collideCircle(ballG.x, ballG.y, ballG.radius)
-                if collision:
+                cx, cy = block.geom.hit_circle(ballG.x, ballG.y, ballG.r)
+                if cx is not None:
                     #Dynamics
-                    px, py = pointOnLine(ballG.xPrev, ballG.yPrev, ballG.x, ballG.y, cx, cy)
+                    px, py = point_on_line(ballG.xPrev, ballG.yPrev, ballG.x, ballG.y, cx, cy)
                     ballG.xPrev = px * 2.0 - ballG.xPrev
                     ballG.yPrev = py * 2.0 - ballG.yPrev
                     
@@ -209,8 +209,8 @@ class Game(EventHandler):
                     self.particleSystem.add(particle.Explosion(px, py))
             
             if self.catcher.rect.colliderect(ball.rect):
-                if self.catcher.geom.collideCircle(ballG.x, ballG.y, ballG.radius)[0]:
-                    px, py = pointOnLine(ballG.xPrev, ballG.yPrev, ballG.x, ballG.y, self.catcher.geom.x, self.catcher.geom.y)
+                if self.catcher.geom.hit_circle(ballG.x, ballG.y, ballG.r)[0] is not None:
+                    px, py = point_on_line(ballG.xPrev, ballG.yPrev, ballG.x, ballG.y, self.catcher.geom.x, self.catcher.geom.y)
                     ballG.xPrev = px * 2.0 - ballG.xPrev
                     ballG.yPrev = py * 2.0 - ballG.yPrev
                     
@@ -228,7 +228,7 @@ class Game(EventHandler):
         
         deadBalls = set()
         for ball in self.balls:
-            if ball.geom.y > self.level.h + ball.geom.radius:
+            if ball.geom.y > self.level.h + ball.geom.r:
                 deadBalls.add(ball)
             elif ball.bumps > ball.maxBumps:
                 deadBalls.add(ball)
@@ -245,9 +245,10 @@ class Game(EventHandler):
         
         display.blit(self.emitter.image, self.emitter.rect)
         geom = self.emitter.geom
-        direction = getDirection(geom.x, geom.y, *pygame.mouse.get_pos())
-        x = int(geom.x + cos(direction) * (geom.radius + 1.0))
-        y = int(geom.y + sin(direction) * (geom.radius + 1.0))
+        mx, my = pygame.mouse.get_pos()
+        direction = atan2(my - geom.y, mx - geom.x)
+        x = int(geom.x + cos(direction) * (geom.r + 1.0))
+        y = int(geom.y + sin(direction) * (geom.r + 1.0))
         pygame.draw.line(display, COLOR0, (geom.x, geom.y), (x, y), 5)
         
         display.blit(self.catcher.image, self.catcher.rect)

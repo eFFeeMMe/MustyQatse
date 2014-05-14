@@ -24,22 +24,22 @@ def level(display, level):
     
     for block in level.blocks:
         image = block.hitImage if block.touched else block.image
-        display.blit(image, block.geom.rect)
+        display.blit(image, block.rect)
 
 def silhouette(shape, color, aa=False):
-    rect = shape.rect
+    rect = pygame.Rect([int(x) for x in shape.aabb])
     
     hurray = list(list([0, 0, 0, 0] for i in range(rect.height)) for i in range(rect.width))
     if aa:
         for x in range(rect.width*2):
             for y in range(rect.height*2):
-                if shape.collidePoint(rect.left + x / 2.0, rect.top + y / 2.0):
+                if shape.hit(rect.left + x / 2.0, rect.top + y / 2.0):
                     hurray[x/2][y/2][0:3] = color
                     hurray[x/2][y/2][3] += 255 / 4
     else:
         for x in range(rect.width):
             for y in range(rect.height):
-                if shape.collidePoint(rect.left + x, rect.top + y):
+                if shape.hit(rect.left + x, rect.top + y):
                     hurray[x][y][0:3] = color
                     hurray[x][y][3] = 255
     

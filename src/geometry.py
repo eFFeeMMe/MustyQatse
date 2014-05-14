@@ -1,162 +1,160 @@
-#!/usr/bin/env python
-from pygame import Rect #used for primitives
+import itertools
 
 from math import hypot, sin, cos, pi, atan2
 
-def dot(Ax, Ay, Bx, By):
-    """Dot product of two vectors in 2d"""
-    return Ax * Bx + Ay * By
+def minmax(data):
+    """returns (min(data), max(data)) but faster"""
+    it = iter(data)
+    try:
+        lo = hi = next(it)
+    except StopIteration:
+        raise ValueError('minmax() arg is an empty sequence')
+    for x in it:
+        if x < lo:
+            lo = x
+        if x > hi:
+            hi = x
+    return lo, hi
 
-def getDirection(Ax, Ay, Bx, By):
-    """Direction from A to B in radians"""
-    return atan2(By - Ay, Bx - Ax)
+def minmax_wat(data): #waht??
+    return min(data), max(data)
 
-def pointOnLine(Px, Py, Ax, Ay, Bx, By):
-    """Point projection on a line. Readable version. Pretty Straightforward."""
-    Vx = Px - Ax
-    Vy = Py - Ay
-    Cx = Bx - Ax
-    Cy = By - Ay
-    d = dot(Vx, Vy, Cx, Cy) / (Cx ** 2 + Cy ** 2)
-    return Ax + Cx * d, Ay + Cy * d
+def point_on_line(Px, Py, Ax, Ay, Bx, By):
+    """Point projection on a line."""
+    ABx = Bx - Ax
+    ABy = By - Ay
+    d = ((Px - Ax) * ABx + (Py - Ay) * ABy) / (ABx ** 2 + ABy ** 2)
+    return Ax + ABx * d, Ay + ABy * d
 
-def pointOnSegment(Px, Py, Ax, Ay, Bx, By):
-    """Point projection on a line. Readable version. Pretty Straightforward."""
-    Vx = Px - Ax
-    Vy = Py - Ay
-    Cx = Bx - Ax
-    Cy = By - Ay
-    d = dot(Vx, Vy, Cx, Cy) / (Cx ** 2 + Cy ** 2)
-    d = max(0, min(1, d))
-    return Ax + Cx * d, Ay + Cy * d
+def point_on_segment(Px, Py, Ax, Ay, Bx, By):
+    """Point projection on a segment."""
+    ABx = Bx - Ax
+    ABy = By - Ay
+    d = ((Px - Ax) * ABx + (Py - Ay) * ABy) / (ABx ** 2 + ABy ** 2)
+    if d < 0.:
+        d = 0.
+    elif d > 1.:
+        d = 1.
+    return Ax + ABx * d, Ay + ABy * d
 
-def pointOnCircle(Px, Py, Cx, Cy, Cr):
+def point_on_circle(Px, Py, Cx, Cy, Cr):
+    """Point projection on a circle."""
     dx = Px - Cx
     dy = Py - Cy
     distance = hypot(dx, dy)
     return Cx + Cr / distance * dx, Cy + Cr / distance * dy
 
-def circleFromRect(rect):
-    yb = rect.top
-    a, b = rect.size
-    y = yb + (4 * a**2 + b**2) / (8 * a)
-    r = (4 * a**2 + b**2) / (8 * a)
-    return rect.centerx, y, r
-
 def trilateration(Ax, Ay, Bx, By, Cx, Cy):
     """Returns the circle which intersects A B and C"""
     raise NotImplementedError
 
-"""Primitives
 
-"""
 
 class Circle(object):
-    def __init__(self, x, y, radius):
+    def __init__(self, x, y, r):
         self.x = x
         self.y = y
-        self.radius = radius
-        self.rect = Rect(x - radius, y - radius, radius * 2.0, radius * 2.0)
+        self.r = r
+        self.aabb = self.get_aabb()
     
-    def collidePoint(self, x, y):
-        if (x - self.x)**2 + (y - self.y)**2 <= self.radius**2:
+    def hit(self, x, y):
+        if (x - self.x)**2 + (y - self.y)**2 < self.r**2:
             return True
         return False
     
-    def collideCircle(self, x, y, radius):
-        if (x - self.x)**2 + (y - self.y)**2 <= (self.radius + radius)**2:
-            return True, self.x, self.y
-        return False, self.x, self.y
+    def hit_circle(self, x, y, r):
+        if (x - self.x)**2 + (y - self.y)**2 < (self.r + r)**2:
+            return self.x, self.y
+        return None, None
+    
+    def get_aabb(self):
+        return self.x - self.r, self.y - self.r, self.r * 2., self.r * 2.
 
 class Capsule(object):
-    def __init__(self, x0, y0, x1, y1, radius):
+    def __init__(self, x0, y0, x1, y1, r):
         self.x0 = x0
         self.y0 = y0
         self.x1 = x1
         self.y1 = y1
-        self.radius = radius
-        self.rect = Rect(min(x0, x1) - self.radius, min(y0, y1) - self.radius,
-                         abs(x1 - x0) + self.radius*2, abs(y1 - y0) + self.radius*2)
+        self.r = r
+        self.aabb = self.get_aabb()
     
-    def collidePoint(self, x, y):
-        px, py = pointOnSegment(x, y, self.x0, self.y0, self.x1, self.y1)
-        if hypot(x - px, y - py) <= self.radius:
+    def hit(self, x, y):
+        px, py = point_on_segment(x, y, self.x0, self.y0, self.x1, self.y1)
+        if hypot(x - px, y - py) < self.r:
             return True
         return False
     
-    def collideCircle(self, x, y, radius):
-        px, py = pointOnSegment(x, y, self.x0, self.y0, self.x1, self.y1)
-        if hypot(x - px, y - py) <= self.radius + radius:
-            return True, px, py
-        return False, px, py
+    def hit_circle(self, x, y, r):
+        px, py = point_on_segment(x, y, self.x0, self.y0, self.x1, self.y1)
+        if hypot(x - px, y - py) < self.r + r:
+            return px, py
+        return None, None
+    
+    def get_aabb(self):
+        return (min(self.x0, self.x1) - self.r,
+                min(self.y0, self.y1) - self.r,
+                abs(self.x1 - self.x0) + self.r*2.,
+                abs(self.y1 - self.y0) + self.r*2.)
 
-class Rectangle(object):
+class Polygon(object):
+    def __init__(self, *points):
+        self.points = points
+        self.edges = [(points[i][0], points[i][1],
+            points[i+1][0], points[i+1][1]) for i in range(-1, len(points)-1)]
+        self.aabb = self.get_aabb()
+    
+    def hit(self, x, y):
+        """en.wikipedia.org/wiki/Point_in_polygon#Ray_casting_algorithm"""
+        collision = False
+        for Ax, Ay, Bx, By in self.edges:
+            if Ay == By: #horizontal edge, doesn't matter because the
+                continue #test ray is also horizontal.
+            else:
+                Cx = ((y - Ay) * (Bx - Ax)) / (By - Ay) + Ax
+                if Cx > x and (Ax <= Cx <= Bx or Bx <= Cx <= Ax):
+                    collision = not collision
+        
+        return collision
+    
+    def hit_circle(self, x, y, r):
+        for Ax, Ay, Bx, By in self.edges:
+            Px, Py = point_on_segment(x, y, Ax, Ay, Bx, By)
+            if (Px - x) ** 2  + (Py - y) ** 2 < r ** 2:
+                return Px, Py
+        
+        if self.hit(x, y):
+            return x, y
+        
+        return None, None
+    
+    def get_aabb(self):
+        x0, x1 = minmax(p[0] for p in self.points)
+        y0, y1 = minmax(p[1] for p in self.points)
+        return x0, y0, x1 - x0, y1 - y0
+
+class Rectangle(Polygon):
     def __init__(self, x, y, w, h):
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-        self.rect = Rect(x, y, w, h)
-    
-    def collidePoint(self, x, y):
-        if self.x <= x < self.x + self.w and self.y <= y < self.y + self.h:
-            return True
-    
-    def collideCircle(self, x, y, radius):
-        ax = self.x - radius < x < self.x + self.w + radius
-        ay = self.y < y < self.y + self.h
-        bx = self.x < x < self.x + self.w
-        by = self.y - radius < y < self.y + self.h + radius
-        if bx and ay:
-            return True, self.x + self.w / 2.0, self.y + self.h / 2.0
-        elif ax and ay:
-            if x > self.x + self.w / 2.0:
-                return True, self.x + self.w, y
-            else:
-                return True, self.x, y
-        elif bx and by:
-            if y > self.y + self.h / 2.0:
-                return True, x, self.y + self.h
-            else:
-                return True, x, self.y
-        elif x < self.x and y < self.y:
-            if hypot(x - self.x, y - self.y) < radius:
-                return True, self.x, self.y
-            else:
-                return False, 0, 0
-        elif x > self.x + self.w and y < self.y:
-            if hypot(x - self.x - self.w, y - self.y) < radius:
-                return True, self.x + self.w, self.y
-            else:
-                return False, 0, 0
-        elif x > self.x + self.w and y > self.y + self.h:
-            if hypot(x - self.x - self.w, y - self.y - self.h) < radius:
-                return True, self.x + self.w, self.y + self.h
-            else:
-                return False, 0, 0
-        elif x < self.x and y > self.y + self.h:
-            if hypot(x - self.x, y - self.y - self.h) < radius:
-                return True, self.x, self.y + self.h
-            else:
-                return False, 0, 0
-        else:
-            return False, 0, 0
+        Polygon.__init__(self, (x, y), (x, y+h), (x+w, y+h), (x+w, y))
 
 class Arc(object):
-    def __init__(self, x, y, inRadius, outRadius, angle0, angle1):
-        """Makes an Arc surface with center(not barycenter!) in (x, y).
+    def __init__(self, x, y, r0, r1, angle0, angle1):
+        """Arc centered in (x, y), sweeps ccw angle0 to angle1,
+        r0 internal radius, r1 external radius.
         
-        The surface is swept anti-clockwise from angle0 to angle1.
         """
         self.x = x
         self.y = y
-        self.inRadius = min(inRadius, outRadius)
-        self.outRadius = max(inRadius, outRadius)
+        if r0 > r1:
+            r0, r1 = r1, r0
+        self.r0 = r0
+        self.r1 = r1
         
         #We sanitize angle values, but take into account their
         #"before-sanitation order" to preserve the expected swept area.
         #This procedure will also highlight whether degree zero is swept by
         #the arc, making it problematic.
+        #TODO check if this works, it looks suspicious
         saneAngle0 = angle0 - (pi * 2) * int(angle0 / (pi * 2))
         saneAngle1 = angle1 - (pi * 2) * int(angle1 / (pi * 2))
         
@@ -182,59 +180,60 @@ class Arc(object):
         #Problems arise when the arc sweeps degree 0.
         #We make a special case for that.
         if self._special:
-            self.collidePoint = self.collidePointSpecial
-            self.collideCircle = self.collideCircleSpecial
+            self.hit = self.hit_special
+            self.hit_circle = self.hit_special
         
-        self.rect = Rect(self.getRectangle())
-        self.rect.normalize()
+        self.aabb = self.get_aabb()
     
-    def collidePoint(self, x, y):
-        if self.inRadius**2 <= (x - self.x)**2 + (y - self.y)**2 <= self.outRadius**2:
-            if self.angle0 <= getDirection(self.x, self.y, x, y) <= self.angle1:
+    def hit(self, x, y):
+        if self.r0**2 < (x - self.x)**2 + (y - self.y)**2 < self.r1**2:
+            if self.angle0 < atan2(y - self.y, x - self.x) < self.angle1:
                 return True
-        return False
+        else:
+            return False
     
-    def collidePointSpecial(self, x, y):
-        if self.inRadius**2 <= (x - self.x)**2 + (y - self.y)**2 <= self.outRadius**2:
-            d = getDirection(self.x, self.y, x, y)
-            if d <= self.angle0 or d >= self.angle1:
-                return True
-        return False
-    
-    def collideCircle(self, x, y, radius):
-        distance = hypot(x - self.x, y - self.y)
-        if self.inRadius - radius <= distance <= self.outRadius + radius:
-            u = radius / distance / 2.0
-            if self.angle0 <= getDirection(self.x, self.y, x, y) <= self.angle1:
-                return True, self.x, self.y
-        return False, self.x, self.y
-    
-    def collideCircleSpecial(self, x, y, radius):
-        distance = hypot(x - self.x, y - self.y)
-        if self.inRadius - radius <= distance <= self.outRadius + radius:
-            u = radius / distance / 2.0
-            d = getDirection(self.x, self.y, x, y)
+    def hit_special(self, x, y):
+        if self.r0**2 < (x - self.x)**2 + (y - self.y)**2 < self.r1**2:
+            d = atan2(y - self.y, x - self.x)
             if d < self.angle0 or d > self.angle1:
-                return True, self.x, self.y
-        return False, self.x, self.y
+                return True
+        else:
+            return False
     
-    def getRectangle(self):
-        """Returns x, y, w, h"""
-        ax = self.x + cos(self.angle0) * self.inRadius
-        ay = self.y + sin(self.angle0) * self.inRadius
-        bx = self.x + cos(self.angle0) * self.outRadius
-        by = self.y + sin(self.angle0) * self.outRadius
-        cx = self.x + cos(self.angle1) * self.outRadius
-        cy = self.y + sin(self.angle1) * self.outRadius
-        dx = self.x + cos(self.angle1) * self.inRadius
-        dy = self.y + sin(self.angle1) * self.inRadius
+    def hit_circle(self, x, y, r):
+        distance = hypot(x - self.x, y - self.y)
+        if self.r0 - r <= distance <= self.r1 + r:
+            u = r / distance / 2.0
+            if self.angle0 <= atan2(y - self.y, x - self.x) <= self.angle1:
+                return self.x, self.y
+        return None, None
+    
+    def hit_circle_special(self, x, y, r):
+        distance = hypot(x - self.x, y - self.y)
+        if self.r0 - r <= distance <= self.r1 + r:
+            u = r / distance / 2.0
+            d = atan2(y - self.y, x - self.x)
+            if d < self.angle0 or d > self.angle1:
+                return self.x, self.y
+        return None, None
+    
+    def get_aabb(self):
+        """Returns x, y, w, h. CRAPPY, doesn't always work"""
+        Ax = self.x + cos(self.angle0) * self.r0
+        Ay = self.y + sin(self.angle0) * self.r0
+        Bx = self.x + cos(self.angle0) * self.r1
+        By = self.y + sin(self.angle0) * self.r1
+        Cx = self.x + cos(self.angle1) * self.r1
+        Cy = self.y + sin(self.angle1) * self.r1
+        Dx = self.x + cos(self.angle1) * self.r0
+        Dy = self.y + sin(self.angle1) * self.r0
         #Middle of the arc
-        ex = self.x + cos((self.angle0 + self.angle1) / 2.0) * self.outRadius
-        ey = self.y + sin((self.angle0 + self.angle1) / 2.0) * self.outRadius
+        Ex = self.x + cos((self.angle0 + self.angle1) / 2.) * self.r1
+        Ey = self.y + sin((self.angle0 + self.angle1) / 2.) * self.r1
         
-        top = min(ay, by, cy, dy, ey)
-        bottom = max(ay, by, cy, dy, ey)
-        left = min(ax, bx, cx, dx, ex)
-        right = max(ax, bx, cx, dx, ex)
+        top = min(Ay, By, Cy, Dy, Ey)
+        bottom = max(Ay, By, Cy, Dy, Ey)
+        left = min(Ax, Bx, Cx, Dx, Ex)
+        right = max(Ax, Bx, Cx, Dx, Ex)
         
         return left, top, right - left, bottom - top

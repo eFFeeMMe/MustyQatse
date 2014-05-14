@@ -5,7 +5,7 @@ import pygame
 
 import render
 from level import Level
-from geometry import getDirection, pointOnSegment, pointOnCircle, \
+from geometry import point_on_segment, point_on_circle, \
                      Circle, Capsule, Rectangle, Arc
 
 class Line:
@@ -26,7 +26,7 @@ class Line:
         self.rect.normalize()
     
     def pointDistance(self, x, y):
-        return pointOnSegment(x, y, self.x0, self.y0, self.x1, self.y1)
+        return point_on_segment(x, y, self.x0, self.y0, self.x1, self.y1)
     
     def snapToPoint(self, x, y):
         distance = hypot(x - self.x0, y - self.y0)
@@ -45,7 +45,7 @@ class Circle:
         self.y = y
         self.direction = 0.0
         self.subdivisions = 2.0
-        r = self.radius = (unit * self.subdivisions) / (pi * 2.0)
+        r = self.r = (unit * self.subdivisions) / (pi * 2.0)
         
         self.rect = pygame.Rect(self.x - r, self.y - r, self.x + r, self.y + r)
     
@@ -57,8 +57,8 @@ class Circle:
             snapDirection = direction - decrement
         else:
             snapDirection = direction - decrement + increment
-        x = self.x + cos(snapDirection) * self.radius
-        y = self.y + sin(snapDirection) * self.radius
+        x = self.x + cos(snapDirection) * self.r
+        y = self.y + sin(snapDirection) * self.r
         return x, y
     
     def pointDistance(self, x, y):
@@ -75,15 +75,15 @@ def drawLine(display, line):
         pygame.draw.circle(display, COLOR4, (x, y), 2)
 
 def drawCircle(display, circle):
-    pygame.draw.circle(display, COLOR4, (circle.x, circle.y), circle.radius, 1)
+    pygame.draw.circle(display, COLOR4, (circle.x, circle.y), circle.r, 1)
     
     for i in range(circle.subdivisions):
         direction = circle.direction + (i / circle.subdivisions) * pi * 2
-        x = circle.x + cos(direction) * circle.outRadius
-        y = circle.y + sin(direction) * circle.outRadius
+        x = circle.x + cos(direction) * circle.r1
+        y = circle.y + sin(direction) * circle.r1
         pygame.draw.circle(display, COLOR4, (x, y), 2)
 
-class Editor: #In MVC terms, Level is the model, Editor is the control
+class Editor:
     def __init__(self, main):
         #Current editing process
         self.process = None
@@ -112,7 +112,7 @@ class Editor: #In MVC terms, Level is the model, Editor is the control
                     if (type(block) in self.selectSet))
         if hits:
             candidate = hits[0]
-            if candidate.collidePoint(*pos): #mousepos
+            if candidate.hit(*pos): #mousepos
                 self.hovered = candidate
             else:
                 self.hovered = None
@@ -154,7 +154,7 @@ class Editor: #In MVC terms, Level is the model, Editor is the control
         if self.step == 0:
             hits = self.editor.level.planTree.hit(pygame.Rect(mx-1, my-1, 2, 2))
             for plan in hits:
-                if plan.collidePoint(mx, my):
+                if plan.hit(mx, my):
                     self.editor.level.plans.remove(plan)
                     self.editor.level.planTree.remove(plan)
                     break

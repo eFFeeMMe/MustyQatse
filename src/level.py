@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 from math import sin, cos, pi
 
+import pygame
+
 from quadtree import QuadTree
 from geometry import Circle, Rectangle, Capsule, Arc
 
@@ -9,7 +11,7 @@ class Block:
     def __init__(self, geom):
         self.touched = False
         self.geom = geom
-        self.rect = geom.rect
+        self.rect = pygame.Rect(geom.aabb)
     
     def touch(self):
         self.touched = True
