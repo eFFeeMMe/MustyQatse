@@ -177,7 +177,7 @@ class QuadTree(object):
     
     def hitPoint(self, x, y):
         # Find the hits at the current level.
-        hits = set(item for item in self.items if item.rect.hit((x, y)))
+        hits = set(item for item in self.items if item.rect.collidepoint((x, y)))
         
         # Recursively check the lower quadrants.
         if self.nw and x <= self.cx and y <= self.cy:
