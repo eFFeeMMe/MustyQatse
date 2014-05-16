@@ -86,7 +86,7 @@ class RotatingMenu(object):
         for k, v in items.items():
             if type(v) == dict:
                 #We make a sub-menu, a way to come back and a way to reach it
-                sub = RotatingMenu(main, x, y, w, h, arc, defaultAngle, wrap, headerText=k, backText=backText, items=v, on_selection=on_selection)
+                sub = RotatingMenu(main, x, y, w, h, arc, defaultAngle, wrap=wrap, headerText=k, backText=backText, items=v, on_selection=on_selection)
                 sub.add_item(MenuItem(backText, lambda: on_selection(self)))
                 self.add_item(MenuItem(k, lambda: on_selection(sub)))
             else:

@@ -7,7 +7,6 @@ import render
 from render import COLOR0, COLOR1, COLOR2, COLOR3
 import particle
 from event import EventHandler
-from level import Level
 from quadtree import QuadTree
 from menu import sinInterpolation
 
@@ -42,6 +41,51 @@ class GUI(object):
     def draw(self, display):
         display.blit(self.score_image, (self.x, self.y))
         display.blit(self.balls_image, (self.x, self.y+30))
+
+class Block:
+    def __init__(self, geom):
+        self.touched = False
+        self.geom = geom
+        self.rect = pygame.Rect(geom.aabb)
+        self.image = render.silhouette(geom, render.COLOR1)
+        self.hitImage = render.silhouette(geom, render.COLOR2)
+    
+    def touch(self):
+        self.touched = True
+
+class Level:
+    def __init__(self, x=0, y=0, w=640, h=480):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        
+        self.plans = set()
+        self.blocks = set()
+        
+        self.planTree = QuadTree(boundingRect=(x, y, x+w, y+h))
+        self.quadTree = QuadTree(boundingRect=(x, y, x+w, y+h))
+    
+    def save(self):
+        pass
+    
+    def load(self):
+        self.startingBalls = 12
+        self.blocks |= set(Block(Circle(320 - 192 + 384/16*i, 250 + i%2*24, 16.0)) for i in range(16))
+        #self.blocks |= set(Block(Circle(320 - 192 + 384/16*i, 298 + i%2*24, 16.0)) for i in range(16))
+        
+        n = 9
+        r0 = 48
+        r1 = 48 + 16
+        self.blocks |= set(Block(Arc(140, 128, r0, r1, pi/n*i, pi/n*(i+0.9))) for i in range(n))
+        self.blocks |= set(Block(Arc(320, 80,  r0, r1, pi/n*i, pi/n*(i+0.9))) for i in range(n))
+        self.blocks |= set(Block(Arc(500, 128, r0, r1, pi/n*i, pi/n*(i+0.9))) for i in range(n))
+        
+        self.blocks |= set(Block(Capsule(32+48.0*i, 360.0, 48+48.0*i, 360.0, 8.0)) for i in range(12))
+        self.blocks |= set(Block(Rectangle(32+48.0*i, 400.0, 24.0, 16.0)) for i in range(13))
+        
+        for block in self.blocks:
+            self.quadTree.insert(block)
 
 class Ball(object):
     max_bumps = 64
