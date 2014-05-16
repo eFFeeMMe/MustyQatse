@@ -39,12 +39,12 @@ class Header(object):
     
     def redraw(self):
         self.image = self.font.render(self._text, True, self._color)
-        size = self.font.size(self._text)
-        self.xOffset = size[0] // 2
-        self.yOffset = size[1] // 2
+        self.rect = self.image.get_rect()
+        self.rect.centerx = self.x
+        self.rect.centery = self.y
     
     def draw(self, display):
-        display.blit(self.image, (self.x-self.xOffset, self.y-self.yOffset))
+        display.blit(self.image, self.rect)
 
 class RotatingMenu(object):
     def __init__(self, main, x, y, w, h, arc=pi*2., defaultAngle=0., wrap=True, headerText="Spam", backText="Back", items={}, on_selection=None):
@@ -87,7 +87,7 @@ class RotatingMenu(object):
             if type(v) == dict:
                 #We make a sub-menu, a way to come back and a way to reach it
                 sub = RotatingMenu(main, x, y, w, h, arc, defaultAngle, wrap, headerText=k, backText=backText, items=v, on_selection=on_selection)
-                sub.add_item(MenuItem(backText, lambda: on_selection(menu)))
+                sub.add_item(MenuItem(backText, lambda: on_selection(self)))
                 self.add_item(MenuItem(k, lambda: on_selection(sub)))
             else:
                 self.add_item(MenuItem(k, v))
