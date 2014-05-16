@@ -3,40 +3,12 @@ from math import sin, cos, pi
 
 import pygame
 
-HALF_PI = pi / 2.0
-
-#Graphics constants
-COLOR0 = 255, 255, 255
-COLOR1 = 255, 127, 0
-COLOR2 = 255, 0, 0
-COLOR3 = 0, 0, 0
+from render import COLOR0, COLOR1, COLOR2, COLOR3
 
 def sinInterpolation(start, end, steps=30):
-    values = [start]
-    delta = end - start
-    for i in range(1, steps):
-        n = HALF_PI * (i / float(steps - 1))
-        values.append(start + delta * sin(n))
-    return values
-
-def createMenuFromDict(main, dictionary, onSelection, backText, x, y, radius,
-                   arc=pi*2.0, defaultAngle=0.0, wrap=True, headerText="Spam"):
-    """Creates a tree of menus from a tree of dictionaries.
-    
-    dictionary: string:function or string:dictionary pairs
-    onSelection: the function to call on entering a subMenu
-    backText: the string that appears on the menu item to go back
-    """
-    menu = RotatingMenu(main, x, y, radius, arc, defaultAngle, wrap, headerText)
-    for k, v in dictionary.items():
-        if type(v) == dict:
-            #We make a sub-menu, a way to come back and a way to reach it
-            sub = createMenuFromDict(main, v, onSelection, backText, x, y, radius, arc, defaultAngle, wrap, k)
-            sub.addItem(MenuItem(backText, lambda: onSelection(menu)))
-            menu.addItem(MenuItem(k, lambda: onSelection(sub)))
-        else:
-            menu.addItem(MenuItem(k, v))
-    return menu
+    d = end - start
+    for i in range(steps):
+        yield start + d * sin((float(i) / float(steps - 1)) * pi * .5)
 
 class Header(object):
     def __init__(self, x, y, text, color=COLOR1):
@@ -44,7 +16,7 @@ class Header(object):
         self.y = y
         self._text = text
         self._color = color
-        self.font = pygame.font.Font(None, 38)
+        self.font = pygame.font.Font(None, 44)
         self.redraw()
     
     @property
@@ -68,25 +40,20 @@ class Header(object):
     def redraw(self):
         self.image = self.font.render(self._text, True, self._color)
         size = self.font.size(self._text)
-        self.xOffset = size[0] / 2
-        self.yOffset = size[1] / 2
+        self.xOffset = size[0] // 2
+        self.yOffset = size[1] // 2
     
     def draw(self, display):
         display.blit(self.image, (self.x-self.xOffset, self.y-self.yOffset))
 
 class RotatingMenu(object):
-    def __init__(self, main, x, y, radius, arc=pi*2, defaultAngle=0, wrap=True, headerText="Spam"):
+    def __init__(self, main, x, y, w, h, arc=pi*2., defaultAngle=0., wrap=True, headerText="Spam", backText="Back", items={}, on_selection=None):
         """
         @param x:
             The horizontal center of this menu in pixels.
         
         @param y:
             The vertical center of this menu in pixels.
-        
-        @param radius:
-            The radius of this menu in pixels(note that this is the size of
-            the circular path in which the elements are placed, the actual
-            size of the menu may vary depending on item sizes.
         
         @param arc:
             The arc in radians which the menu covers. pi*2 is a full circle.
@@ -100,7 +67,8 @@ class RotatingMenu(object):
         """
         self.x = x
         self.y = y
-        self.radius = radius
+        self.w = w
+        self.h = h
         self.arc = arc
         self.defaultAngle = defaultAngle
         self.wrap = wrap
@@ -115,6 +83,15 @@ class RotatingMenu(object):
         self.selectedItem = None
         self.selectedItemNumber = 0
         
+        for k, v in items.items():
+            if type(v) == dict:
+                #We make a sub-menu, a way to come back and a way to reach it
+                sub = RotatingMenu(main, x, y, w, h, arc, defaultAngle, wrap, headerText=k, backText=backText, items=v, on_selection=on_selection)
+                sub.add_item(MenuItem(backText, lambda: on_selection(menu)))
+                self.add_item(MenuItem(k, lambda: on_selection(sub)))
+            else:
+                self.add_item(MenuItem(k, v))
+        
         #Respond to events
         main.bind('quit', sys.exit)
         main.bind('keyDown', self.onKeyPress)
@@ -128,7 +105,7 @@ class RotatingMenu(object):
         elif key == pygame.K_RIGHT:
             self.selectItem(self.selectedItemNumber - 1)
     
-    def addItem(self, item):
+    def add_item(self, item):
         self.items.append(item)
         if len(self.items) == 1:
             self.selectedItem = item
@@ -167,20 +144,21 @@ class RotatingMenu(object):
         self.rotate(self.rotation)
     
     def rotate(self, angle):
-        """@param angle: The angle in radians by which the menu is rotated.
-        """
         for i in range(len(self.items)):
             item = self.items[i]
             n = i / float(len(self.items))
             rot = self.defaultAngle + angle + self.arc * n
             
-            item.x = self.x + cos(rot) * self.radius
-            item.y = self.y + sin(rot) * self.radius / 2.0
+            item.x = self.x + cos(rot) * self.w / 2.
+            item.y = self.y + sin(rot) * self.h / 2.
     
     def update(self):
-        if len(self.rotationSteps) > 0:
-            self.rotation = self.rotationSteps.pop(0)
-            self.rotate(self.rotation)
+        if self.rotationSteps:
+            try:
+                self.rotation = self.rotationSteps.next()
+                self.rotate(self.rotation)
+            except StopIteration:
+                pass
     
     def draw(self, display):
         display.fill((255,255,255))
@@ -199,8 +177,8 @@ class MenuItem(object):
         self.args = args
         self.kwargs = kwargs
         
-        self.x = 0.
-        self.y = 0. #The menu will edit these
+        self.x = 0. #RotatingMenu instances will edit these
+        self.y = 0.
         
         self.font = pygame.font.Font(None, 28)
         
@@ -215,16 +193,13 @@ class MenuItem(object):
     @property
     def text(self):
         return self._text
-    
     @text.setter
     def text(self, value):
         self._text = value
         self.redraw()
-    
     @property
     def color(self):
         return self._color
-    
     @color.setter
     def color(self, value):
         self._color = value
@@ -233,8 +208,8 @@ class MenuItem(object):
     def redraw(self):
         self.image = self.font.render(self._text, True, self._color)
         size = self.font.size(self._text)
-        self.xOffset = size[0] / 2
-        self.yOffset = size[1] / 2
+        self.xOffset = size[0] // 2
+        self.yOffset = size[1] // 2
     
     def draw(self, display):
         display.blit(self.image, (self.x-self.xOffset, self.y-self.yOffset))

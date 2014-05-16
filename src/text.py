@@ -1,4 +1,13 @@
 #!/usr/bin/env python
+import sys, gettext
+
+kwargs = {}
+if sys.version_info[0] < 3:
+    # In Python 2, ensure that the _() that gets installed into built-ins
+    # always returns unicodes.  This matches the default behavior under Python
+    # 3, although that keyword argument is not present in the Python 3 API.
+    kwargs['unicode'] = True
+gettext.install('mustyqatse', **kwargs)
 
 _ = lambda x: x # Preparing for internationalization
 

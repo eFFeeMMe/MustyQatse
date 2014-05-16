@@ -5,7 +5,7 @@ from random import choice
 import pygame
 
 from src import text
-from src.menu import createMenuFromDict
+from src.menu import RotatingMenu
 from src.event import EventHandler
 from src.game import Game
 from src.editor import Editor
@@ -14,7 +14,7 @@ class Main(EventHandler):
     def __init__(self):
         pygame.init()
         
-        self.display = pygame.display.set_mode((640, 480))
+        self.display = pygame.display.set_mode((960, 540))
         self.clock = pygame.time.Clock()
         
         #Then the custom event handling
@@ -32,12 +32,12 @@ class Main(EventHandler):
         #Then the main menu
         noAction = lambda: None
         menuItems = {
-            "Exit": self.menuExit,
+            "Exit": self.on_menu_exit,
             "Options": {
                 "Resolution": noAction,
                 "FPS Limit": noAction,
             },
-            "Start": self.menuGame,
+            "Start": self.on_menu_game,
             "Levels": noAction,
             "Editor": {
                 "New Level": noAction,
@@ -45,38 +45,36 @@ class Main(EventHandler):
             },
         }
         
-        self.menu = createMenuFromDict(self, menuItems, self.menuSelect,
-                        "Back", 320, 240, 270, pi, pi/2.0, False, "Mustyqatse")
+        self.menu = RotatingMenu(self, x=480, y=270, w=700, h=400, arc=pi, defaultAngle=pi/2., wrap=False, headerText="Mustyqatse", items=menuItems, on_selection=self.menuSelect, backText="Back")
         
         self.context = self.menu
     
-    def loop(self):
-        while True:
-            for e in pygame.event.get():
-                if e.type == pygame.KEYDOWN:
-                    self.emit('keyDown', e.key, e.mod)
-                elif e.type == pygame.KEYUP:
-                    self.emit('keyUp', e.key, e.mod)
-                elif e.type == pygame.MOUSEMOTION:
-                    self.emit('mouseMotion', e.pos, e.rel, e.buttons)
-                elif e.type == pygame.MOUSEBUTTONDOWN:
-                    self.emit('mouseButtonDown', e.pos, e.button)
-                elif e.type == pygame.MOUSEBUTTONUP:
-                    self.emit('mouseButtonUp', e.pos, e.button)
-                elif e.type == pygame.QUIT:
-                    self.emit('quit')
-                
-            self.context.update()
-            self.context.draw(self.display)
+    def update(self):
+        for e in pygame.event.get():
+            if e.type == pygame.KEYDOWN:
+                self.emit('keyDown', e.key, e.mod)
+            elif e.type == pygame.KEYUP:
+                self.emit('keyUp', e.key, e.mod)
+            elif e.type == pygame.MOUSEMOTION:
+                self.emit('mouseMotion', e.pos, e.rel, e.buttons)
+            elif e.type == pygame.MOUSEBUTTONDOWN:
+                self.emit('mouseButtonDown', e.pos, e.button)
+            elif e.type == pygame.MOUSEBUTTONUP:
+                self.emit('mouseButtonUp', e.pos, e.button)
+            elif e.type == pygame.QUIT:
+                self.emit('quit')
             
-            pygame.display.flip() #Show the updated scene
-            self.clock.tick(60) #Wait a little to keep the fps steady
+        self.context.update()
+        self.context.draw(self.display)
+        
+        pygame.display.flip()
+        self.clock.tick(60) #Limit FPS
     
     #Menu
     def menuSelect(self, menu):
         self.context = menu
     
-    def menuGame(self):
+    def on_menu_game(self):
         game = Game(self)
         game.win = self.win
         game.lose = self.lose
@@ -91,7 +89,7 @@ class Main(EventHandler):
         editor.back = self.menuBack
         self.context = editor
     
-    def menuExit(self):
+    def on_menu_exit(self):
         return sys.exit()
     
     #Options Menu
@@ -112,4 +110,5 @@ class Main(EventHandler):
 
 if __name__ == "__main__":
     main = Main()
-    main.loop()
+    while True:
+        main.update()

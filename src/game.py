@@ -4,6 +4,7 @@ import pygame
 
 from geometry import point_on_line, Circle, Capsule, Rectangle, Arc
 import render
+from render import COLOR0, COLOR1, COLOR2, COLOR3
 import particle
 from event import EventHandler
 from level import Level
@@ -14,63 +15,70 @@ from menu import sinInterpolation
 GRAVITY = 0.04
 FRICTION = 0.003
 
-#Graphics constants
-COLOR0 = 255, 255, 255
-COLOR1 = 255, 127, 0
-COLOR2 = 255, 0, 0
-COLOR3 = 0, 0, 0
-
-class GUI:
-    def __init__(self, x, y):
+class GUI(object):
+    def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
         
         self.score = 0
         self.balls = 0
-        
-        self.updateImage()
     
-    def updateImage(self):
-        self.scoreImage = render.string("Score: %i" %self.score, COLOR1)
-        self.ballsImage = render.string("Balls: %i" %self.balls, COLOR1)
+    @property
+    def score(self):
+        return self._score
+    @score.setter
+    def score(self, x):
+        self._score = x
+        self.score_image = render.string("Score: %i" %self.score, COLOR1)
+    
+    @property
+    def balls(self):
+        return self._balls
+    @balls.setter
+    def balls(self, x):
+        self._balls = x
+        self.balls_image = render.string("Balls: %i" %self.balls, COLOR1)
     
     def draw(self, display):
-        display.blit(self.scoreImage, (self.x, self.y))
-        display.blit(self.ballsImage, (self.x, self.y+30))
+        display.blit(self.score_image, (self.x, self.y))
+        display.blit(self.balls_image, (self.x, self.y+30))
 
 class Ball(object):
-    maxBumps = 64
+    max_bumps = 64
     def __init__(self, x, y, r):
         self.bumps = 0
         
         self.geom = geom = Circle(x, y, r)
-        geom.xPrev = x
-        geom.yPrev = y
+        geom.xp = x
+        geom.yp = y
         
         self.rect = pygame.Rect(geom.aabb)
-        self.image = render.silhouette(geom, COLOR3, True)
+        self.image = render.silhouette(geom, COLOR3)
     
     def accelerate(self, multiplier):
         geom = self.geom
-        geom.xPrev = geom.xPrev - (geom.x - geom.xPrev) * multiplier
-        geom.yPrev = geom.yPrev - (geom.y - geom.yPrev) * multiplier
+        geom.xp = geom.xp - (geom.x - geom.xp) * multiplier
+        geom.yp = geom.yp - (geom.y - geom.yp) * multiplier
     
     def accelerateInDirection(self, direction, acceleration):
-        self.geom.xPrev -= cos(direction) * acceleration
-        self.geom.yPrev -= sin(direction) * acceleration
+        self.geom.xp -= cos(direction) * acceleration
+        self.geom.yp -= sin(direction) * acceleration
     
     def accelerateTowardsPoint(self, x, y, acceleration):
         dx = x - self.geom.x
         dy = y - self.geom.y
         dist = sqrt(dx ** 2 + dy ** 2)
-        self.geom.xPrev -= (dx / dist) * acceleration
-        self.geom.yPrev -= (dy / dist) * acceleration
+        self.geom.xp -= (dx / dist) * acceleration
+        self.geom.yp -= (dy / dist) * acceleration
     
     def update(self):
         geom = self.geom
-        geom.x, geom.xPrev = geom.x * (2 - FRICTION) - geom.xPrev * (1 - FRICTION), geom.x
-        geom.y, geom.yPrev = geom.y * (2 - FRICTION) - geom.yPrev * (1 - FRICTION), geom.y
-        geom.yPrev -= GRAVITY
+        
+        #Verlet integration
+        geom.x, geom.xp = geom.x * (2 - FRICTION) - geom.xp * (1 - FRICTION), geom.x
+        geom.y, geom.yp = geom.y * (2 - FRICTION) - geom.yp * (1 - FRICTION), geom.y
+        
+        geom.yp -= GRAVITY
         
         self.rect.center = geom.x, geom.y
 
@@ -78,18 +86,18 @@ class Emitter:
     def __init__(self, x, y, r=12):
         self.geom = Circle(x, y, r)
         self.rect = pygame.Rect(self.geom.aabb)
-        self.image = render.silhouette(self.geom, COLOR3, True)
+        self.image = render.silhouette(self.geom, COLOR3)
 
 class Catcher:
-    def __init__(self, x, y, r0, r1, angle0, angle1):
+    def __init__(self, x, y, r0, r1, angle0=-pi*0.75, angle1=-pi*0.25):
         geom = self.geom = Arc(x, y, r0, r1, angle0, angle1)
-        geom.xPrev = x
-        geom.yPrev = y
+        geom.xp = x
+        geom.yp = y
         
         self.fix = 0.1
         
         self.rect = pygame.Rect(geom.aabb)
-        self.image = render.silhouette(geom, COLOR3, True)
+        self.image = render.silhouette(geom, COLOR3)
     
     def update(self):
         geom = self.geom
@@ -109,7 +117,7 @@ class Game(EventHandler):
         self.level = Level()
         
         self.emitter = Emitter(320, 24)
-        self.catcher = Catcher(320, 540, 84, 100, -pi*0.75, -pi*0.25)
+        self.catcher = Catcher(320, 540, 84, 100)
         
         #Containers
         self.balls = set()
@@ -132,7 +140,6 @@ class Game(EventHandler):
         
         self.GUI.score = self.score
         self.GUI.balls = self.avaibleBalls
-        self.GUI.updateImage()
         
         self.balls.clear()
         self.particleSystem.clear()
@@ -175,30 +182,27 @@ class Game(EventHandler):
             self.level.quadTree = QuadTree(items=self.level.blocks)
         
         self.GUI.balls = self.avaibleBalls
-        self.GUI.updateImage()
     
     def addScore(self):
         self.score += 1.0 * self.multiplier
         self.multiplier += 0.5
         self.GUI.score = int(self.score)
-        self.GUI.updateImage()
     
     def updateDynamics(self):
         for ball in self.balls:
             ball.update()
             ballG = ball.geom
             if ballG.x < ballG.r or ballG.x + ballG.r > self.level.w:
-                ballG.x, ballG.xPrev = ballG.xPrev, ballG.x
+                ballG.x, ballG.xp = ballG.xp, ballG.x
             for block in self.level.quadTree.hit(ball.rect):
                 cx, cy = block.geom.hit_circle(ballG.x, ballG.y, ballG.r)
                 if cx is not None:
-                    #Dynamics
-                    px, py = point_on_line(ballG.xPrev, ballG.yPrev, ballG.x, ballG.y, cx, cy)
-                    ballG.xPrev = px * 2.0 - ballG.xPrev
-                    ballG.yPrev = py * 2.0 - ballG.yPrev
-                    
-                    ballG.xPrev, ballG.x = ballG.x, ballG.xPrev
-                    ballG.yPrev, ballG.y = ballG.y, ballG.yPrev
+                    #Bounce
+                    px, py = point_on_line(ballG.xp, ballG.yp, ballG.x, ballG.y, cx, cy)
+                    ballG.xp = px * 2.0 - ballG.xp
+                    ballG.yp = py * 2.0 - ballG.yp
+                    ballG.xp, ballG.x = ballG.x, ballG.xp
+                    ballG.yp, ballG.y = ballG.y, ballG.yp
                     
                     #Gameplay
                     ball.bumps += 1
@@ -210,12 +214,12 @@ class Game(EventHandler):
             
             if self.catcher.rect.colliderect(ball.rect):
                 if self.catcher.geom.hit_circle(ballG.x, ballG.y, ballG.r)[0] is not None:
-                    px, py = point_on_line(ballG.xPrev, ballG.yPrev, ballG.x, ballG.y, self.catcher.geom.x, self.catcher.geom.y)
-                    ballG.xPrev = px * 2.0 - ballG.xPrev
-                    ballG.yPrev = py * 2.0 - ballG.yPrev
+                    px, py = point_on_line(ballG.xp, ballG.yp, ballG.x, ballG.y, self.catcher.geom.x, self.catcher.geom.y)
+                    ballG.xp = px * 2.0 - ballG.xp
+                    ballG.yp = py * 2.0 - ballG.yp
                     
-                    ballG.xPrev, ballG.x = ballG.x, ballG.xPrev #Invert motion
-                    ballG.yPrev, ballG.y = ballG.y, ballG.yPrev
+                    ballG.xp, ballG.x = ballG.x, ballG.xp #Invert motion
+                    ballG.yp, ballG.y = ballG.y, ballG.yp
                     
                     self.particleSystem.add(particle.Explosion(ball.geom.x, ball.geom.y, 7))
     
@@ -230,7 +234,7 @@ class Game(EventHandler):
         for ball in self.balls:
             if ball.geom.y > self.level.h + ball.geom.r:
                 deadBalls.add(ball)
-            elif ball.bumps > ball.maxBumps:
+            elif ball.bumps > ball.max_bumps:
                 deadBalls.add(ball)
         for ball in deadBalls:
             self.particleSystem.add(particle.Explosion(ball.geom.x, ball.geom.y, 18))

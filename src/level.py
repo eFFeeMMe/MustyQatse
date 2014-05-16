@@ -3,15 +3,18 @@ from math import sin, cos, pi
 
 import pygame
 
+
+import render
 from quadtree import QuadTree
 from geometry import Circle, Rectangle, Capsule, Arc
 
 class Block:
-    _dynamic = False
     def __init__(self, geom):
         self.touched = False
         self.geom = geom
         self.rect = pygame.Rect(geom.aabb)
+        self.image = render.silhouette(geom, render.COLOR1)
+        self.hitImage = render.silhouette(geom, render.COLOR2)
     
     def touch(self):
         self.touched = True
@@ -28,8 +31,6 @@ class Level:
         
         self.planTree = QuadTree(boundingRect=(x, y, x+w, y+h))
         self.quadTree = QuadTree(boundingRect=(x, y, x+w, y+h))
-        
-        self._prerendered = False
     
     def save(self):
         pass

@@ -13,12 +13,6 @@ def string(s, color):
     return font.render(s, True, color)
 
 def level(display, level):
-    if level._prerendered == False:
-        for block in level.blocks:
-            block.image = silhouette(block.geom, COLOR1, True)
-            block.hitImage = silhouette(block.geom, COLOR2, True)
-        level._prerendered = True
-    
     for plan in level.plans:
         pass
     
@@ -26,29 +20,28 @@ def level(display, level):
         image = block.hitImage if block.touched else block.image
         display.blit(image, block.rect)
 
-def silhouette(shape, color, aa=False):
-    rect = pygame.Rect([int(x) for x in shape.aabb])
-    
-    hurray = list(list([0, 0, 0, 0] for i in range(rect.height)) for i in range(rect.width))
-    if aa:
-        for x in range(rect.width*2):
-            for y in range(rect.height*2):
-                if shape.hit(rect.left + x / 2.0, rect.top + y / 2.0):
-                    hurray[x/2][y/2][0:3] = color
-                    hurray[x/2][y/2][3] += 255 / 4
-    else:
-        for x in range(rect.width):
-            for y in range(rect.height):
-                if shape.hit(rect.left + x, rect.top + y):
-                    hurray[x][y][0:3] = color
-                    hurray[x][y][3] = 255
-    
-    image = pygame.Surface(rect.size, pygame.SRCALPHA, 32)
+def silhouette(shape, color):
+    x0, y0, w, h = (int(val) for val in shape.aabb)
+    image = pygame.Surface((w, h), pygame.SRCALPHA, 32)
     colorArray = pygame.surfarray.pixels3d(image)
     alphaArray = pygame.surfarray.pixels_alpha(image)
-    for w in range(rect.width):
-        for h in range(rect.height):
-            colorArray[w][h][0:3] = hurray[w][h][0:3]
-            alphaArray[w][h] = hurray[w][h][3]
+    for x in range(w):
+        for y in range(h):
+            if shape.hit(x0 + x, y0 + y):
+                colorArray[x][y] = color
+                alphaArray[x][y] = 255
+    
+    return image
+
+def silhouette_multisampled(shape, color):
+    x0, y0, w, h = (int(val) for val in shape.aabb)
+    image = pygame.Surface((w, h), pygame.SRCALPHA, 32)
+    colorArray = pygame.surfarray.pixels3d(image)
+    alphaArray = pygame.surfarray.pixels_alpha(image)
+    for x in range(w*2):
+        for y in range(h*2):
+            if shape.hit(x0 + x / 2., y0 + y / 2.):
+                hurray[x//2][y//2][0:3] = color
+                hurray[x//2][y//2][3] += 255 // 4
     
     return image

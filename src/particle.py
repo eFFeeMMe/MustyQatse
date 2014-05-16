@@ -2,12 +2,7 @@
 import pygame
 
 from menu import sinInterpolation
-
-#Graphics constants
-COLOR0 = 255, 255, 255
-COLOR1 = 255, 127, 0
-COLOR2 = 255, 0, 0
-COLOR3 = 0, 0, 0
+from render import COLOR0, COLOR1, COLOR2, COLOR3
 
 class ParticleSystem:
     def __init__(self):
@@ -34,7 +29,7 @@ class ParticleSystem:
             particle.draw(display)
 
 class Explosion:
-    def __init__(self, x, y, startRadius=16, startColor=COLOR1, endColor=COLOR0):
+    def __init__(self, x, y, life=30, startRadius=16, startColor=COLOR2, endColor=COLOR0):
         self.x = x
         self.y = y
         self.radius = startRadius
@@ -44,25 +39,27 @@ class Explosion:
         self.startColor = startColor
         self.endColor = endColor
         
-        self.life = 30
-        self.maxLife = 30
-        self.alphaSteps = sinInterpolation(0, 1, self.life)
+        self.life = life
+        self.alphaSteps = sinInterpolation(0, 1, life)
     
     def update(self):
-        a = self.alphaSteps[self.maxLife - self.life]
-        self.radius = self.startRadius + self.startRadius * a
-        for i in 0, 1, 2:
-            self.color[i] = self.startColor[i] * (1 - a) + self.endColor[i] * a
+        try:
+            a = self.alphaSteps.next()
+            self.radius = self.startRadius + self.startRadius * a
+            for i in 0, 1, 2:
+                self.color[i] = self.startColor[i] * (1 - a) + self.endColor[i] * a
+        except StopIteration:
+            pass
     
     def draw(self, display):
         pygame.draw.circle(display, self.color, (int(self.x), int(self.y)), int(self.radius), 1)
 
 class Text:
-    def __init__(self, x, y, text, color=COLOR3):
+    def __init__(self, x, y, text, life=30, color=COLOR3):
         self.x = x
         self.y = y
         
-        self.life = 30
+        self.life = life
         
         self.image = pygame.font.Font(None, 12).render(text, True, color)
     
