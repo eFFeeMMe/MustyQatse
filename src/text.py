@@ -9,8 +9,6 @@ if sys.version_info[0] < 3:
     kwargs['unicode'] = True
 gettext.install('mustyqatse', **kwargs)
 
-_ = lambda x: x # Preparing for internationalization
-
 header = _("Mustyqatse")
 
 start = _("Start")
