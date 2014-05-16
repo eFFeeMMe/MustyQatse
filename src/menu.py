@@ -16,7 +16,7 @@ class Header(object):
         self.y = y
         self._text = text
         self._color = color
-        self.font = pygame.font.Font(None, 44)
+        self.font = pygame.font.Font(None, 54)
         self.redraw()
     
     @property
@@ -77,7 +77,7 @@ class RotatingMenu(object):
         self.rotationTarget = 0
         self.rotationSteps = [] #Used for interpolation
         
-        self.header = Header(320, 80, headerText)
+        self.header = Header(x, y-w/4., headerText)
         
         self.items = []
         self.selectedItem = None

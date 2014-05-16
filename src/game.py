@@ -72,14 +72,13 @@ class Level:
     def load(self):
         self.startingBalls = 12
         self.blocks |= set(Block(Circle(320 - 192 + 384/16*i, 250 + i%2*24, 16.0)) for i in range(16))
-        #self.blocks |= set(Block(Circle(320 - 192 + 384/16*i, 298 + i%2*24, 16.0)) for i in range(16))
         
         n = 9
         r0 = 48
         r1 = 48 + 16
-        self.blocks |= set(Block(Arc(140, 128, r0, r1, pi/n*i, pi/n*(i+0.9))) for i in range(n))
-        self.blocks |= set(Block(Arc(320, 80,  r0, r1, pi/n*i, pi/n*(i+0.9))) for i in range(n))
-        self.blocks |= set(Block(Arc(500, 128, r0, r1, pi/n*i, pi/n*(i+0.9))) for i in range(n))
+        self.blocks |= set(Block(Arc(140, 128, r0, r1, i*pi/n, pi/n*(i+.9))) for i in range(n))
+        self.blocks |= set(Block(Arc(320, 80,  r0, r1, i*pi/n, pi/n*(i+.9))) for i in range(n))
+        self.blocks |= set(Block(Arc(500, 128, r0, r1, i*pi/n, pi/n*(i+.9))) for i in range(n))
         
         self.blocks |= set(Block(Capsule(32+48.0*i, 360.0, 48+48.0*i, 360.0, 8.0)) for i in range(12))
         self.blocks |= set(Block(Rectangle(32+48.0*i, 400.0, 24.0, 16.0)) for i in range(13))
@@ -119,8 +118,8 @@ class Ball(object):
         geom = self.geom
         
         #Verlet integration
-        geom.x, geom.xp = geom.x * (2 - FRICTION) - geom.xp * (1 - FRICTION), geom.x
-        geom.y, geom.yp = geom.y * (2 - FRICTION) - geom.yp * (1 - FRICTION), geom.y
+        geom.x, geom.xp = geom.x * (2. - FRICTION) - geom.xp * (1. - FRICTION), geom.x
+        geom.y, geom.yp = geom.y * (2. - FRICTION) - geom.yp * (1. - FRICTION), geom.y
         
         geom.yp -= GRAVITY
         
@@ -131,22 +130,34 @@ class Emitter:
         self.geom = Circle(x, y, r)
         self.rect = pygame.Rect(self.geom.aabb)
         self.image = render.silhouette(self.geom, COLOR3)
+    
+    def draw(self, display):
+        display.blit(self.image, self.rect)
+        geom = self.geom
+        mx, my = pygame.mouse.get_pos()
+        direction = atan2(my - geom.y, mx - geom.x)
+        x = int(geom.x + cos(direction) * (geom.r + 1.))
+        y = int(geom.y + sin(direction) * (geom.r + 1.))
+        pygame.draw.line(display, COLOR0, (geom.x, geom.y), (x, y), 5)
 
 class Catcher:
-    def __init__(self, x, y, r0, r1, angle0=-pi*0.75, angle1=-pi*0.25):
+    def __init__(self, x, y, r0, r1, angle0=-pi*.75, angle1=-pi*.25):
         geom = self.geom = Arc(x, y, r0, r1, angle0, angle1)
         geom.xp = x
         geom.yp = y
         
-        self.fix = 0.1
+        self.fix = .1
         
         self.rect = pygame.Rect(geom.aabb)
         self.image = render.silhouette(geom, COLOR3)
     
     def update(self):
         geom = self.geom
-        geom.x = geom.x * (1 - self.fix) + pygame.mouse.get_pos()[0] * self.fix
+        geom.x = geom.x * (1. - self.fix) + pygame.mouse.get_pos()[0] * self.fix
         self.rect.centerx = geom.x
+    
+    def draw(self, display):
+        display.blit(self.image, self.rect)
 
 class Game(EventHandler):
     def __init__(self, main):
@@ -291,15 +302,9 @@ class Game(EventHandler):
         
         render.level(display, self.level)
         
-        display.blit(self.emitter.image, self.emitter.rect)
-        geom = self.emitter.geom
-        mx, my = pygame.mouse.get_pos()
-        direction = atan2(my - geom.y, mx - geom.x)
-        x = int(geom.x + cos(direction) * (geom.r + 1.0))
-        y = int(geom.y + sin(direction) * (geom.r + 1.0))
-        pygame.draw.line(display, COLOR0, (geom.x, geom.y), (x, y), 5)
+        self.emitter.draw(display)
+        self.catcher.draw(display)
         
-        display.blit(self.catcher.image, self.catcher.rect)
         for ball in self.balls:
             display.blit(ball.image, ball.rect)
         
