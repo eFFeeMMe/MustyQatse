@@ -215,10 +215,3 @@ class QuadTree(object):
             hits |= self.se.hit(rect)
  
         return hits
-    
-    def clear(self):
-        self.items = []
-        self.nw = None
-        self.sw = None
-        self.ne = None
-        self.se = None

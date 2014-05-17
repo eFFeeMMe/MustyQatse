@@ -45,7 +45,7 @@ class Main(EventHandler):
             },
         }
         
-        self.menu = RotatingMenu(self, x=480, y=270, w=700, h=400, arc=pi, defaultAngle=pi/2., wrap=False, headerText="Mustyqatse", items=menuItems, on_selection=self.menuSelect, backText="Back")
+        self.menu = RotatingMenu(self, x=480, y=270, w=700, h=400, arc=pi, defaultAngle=pi/2., wrap=False, headerText="Mustyqatse", items=menuItems, on_selection=self.menu_select, backText="Back")
         
         self.context = self.menu
     
@@ -71,7 +71,7 @@ class Main(EventHandler):
         self.clock.tick(60) #Limit FPS
     
     #Menu
-    def menuSelect(self, menu):
+    def menu_select(self, menu):
         self.context = menu
     
     def on_menu_game(self):

@@ -17,27 +17,24 @@ class Header(object):
         self._text = text
         self._color = color
         self.font = pygame.font.Font(None, 54)
-        self.redraw()
+        self.render()
     
     @property
     def text(self):
         return self._text
-    
     @text.setter
     def text(self, value):
         self._text = value
-        self.redraw()
-    
+        self.render()
     @property
     def color(self):
         return self._color
-    
     @color.setter
     def color(self, value):
         self._color = value
-        self.redraw()
+        self.render()
     
-    def redraw(self):
+    def render(self):
         self.image = self.font.render(self._text, True, self._color)
         self.rect = self.image.get_rect()
         self.rect.centerx = self.x
@@ -164,7 +161,8 @@ class RotatingMenu(object):
         display.fill((255,255,255))
         self.header.draw(display)
         for item in self.items:
-            item.draw(display)
+            item.rect.center = item.x, item.y
+            display.blit(item.image, item.rect)
 
 class MenuItem(object):
     def __init__(self, text="Spam", function=None, args=[], kwargs={}):
@@ -182,7 +180,7 @@ class MenuItem(object):
         
         self.font = pygame.font.Font(None, 28)
         
-        self.redraw()
+        self.render()
     
     def select(self):
         self.color = self.selectedColor
@@ -196,20 +194,15 @@ class MenuItem(object):
     @text.setter
     def text(self, value):
         self._text = value
-        self.redraw()
+        self.render()
     @property
     def color(self):
         return self._color
     @color.setter
     def color(self, value):
         self._color = value
-        self.redraw()
+        self.render()
     
-    def redraw(self):
+    def render(self):
         self.image = self.font.render(self._text, True, self._color)
-        size = self.font.size(self._text)
-        self.xOffset = size[0] // 2
-        self.yOffset = size[1] // 2
-    
-    def draw(self, display):
-        display.blit(self.image, (self.x-self.xOffset, self.y-self.yOffset))
+        self.rect = self.image.get_rect()

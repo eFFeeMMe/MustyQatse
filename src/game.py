@@ -54,7 +54,7 @@ class Block:
         self.touched = True
 
 class Level:
-    def __init__(self, x=0, y=0, w=640, h=480):
+    def __init__(self, x=0, y=0, w=960, h=540):
         self.x = x
         self.y = y
         self.w = w
@@ -71,17 +71,17 @@ class Level:
     
     def load(self):
         self.startingBalls = 12
-        self.blocks |= set(Block(Circle(320 - 192 + 384/16*i, 250 + i%2*24, 16.0)) for i in range(16))
+        self.blocks |= set(Block(Circle(480 - 192 + 384/16*i, 250 + i%2*24, 16.0)) for i in range(16))
         
         n = 9
-        r0 = 48
-        r1 = 48 + 16
-        self.blocks |= set(Block(Arc(140, 128, r0, r1, i*pi/n, pi/n*(i+.9))) for i in range(n))
-        self.blocks |= set(Block(Arc(320, 80,  r0, r1, i*pi/n, pi/n*(i+.9))) for i in range(n))
-        self.blocks |= set(Block(Arc(500, 128, r0, r1, i*pi/n, pi/n*(i+.9))) for i in range(n))
+        r0 = 48.
+        r1 = 48. + 16.
+        self.blocks |= set(Block(Arc(300., 128., r0, r1, i*pi/n, pi/n*(i+.9))) for i in range(n))
+        self.blocks |= set(Block(Arc(480., 80.,  r0, r1, i*pi/n, pi/n*(i+.9))) for i in range(n))
+        self.blocks |= set(Block(Arc(660., 128., r0, r1, i*pi/n, pi/n*(i+.9))) for i in range(n))
         
-        self.blocks |= set(Block(Capsule(32+48.0*i, 360.0, 48+48.0*i, 360.0, 8.0)) for i in range(12))
-        self.blocks |= set(Block(Rectangle(32+48.0*i, 400.0, 24.0, 16.0)) for i in range(13))
+        self.blocks |= set(Block(Capsule(32.+48.*i, 360., 48.+48.*i, 360., 8.)) for i in range(12))
+        self.blocks |= set(Block(Rectangle(32.+48.*i, 400., 24., 16.)) for i in range(13))
         
         for block in self.blocks:
             self.quadTree.insert(block)
@@ -239,42 +239,52 @@ class Game(EventHandler):
         self.GUI.balls = self.avaibleBalls
     
     def addScore(self):
-        self.score += 1.0 * self.multiplier
-        self.multiplier += 0.5
+        self.score += 100. * self.multiplier
+        self.multiplier += .5
         self.GUI.score = int(self.score)
     
     def updateDynamics(self):
         for ball in self.balls:
             ball.update()
-            ballG = ball.geom
-            if ballG.x < ballG.r or ballG.x + ballG.r > self.level.w:
-                ballG.x, ballG.xp = ballG.xp, ballG.x
+            bg = ball.geom
+            
+            #Level walls
+            if bg.x < bg.r or bg.x + bg.r > self.level.w:
+                bg.x, bg.xp = bg.xp, bg.x
+            
+            #Block collisions
             for block in self.level.quadTree.hit(ball.rect):
-                cx, cy = block.geom.hit_circle(ballG.x, ballG.y, ballG.r)
-                if cx is not None:
+                dx, dy = block.geom.hit_circle(bg.x, bg.y, bg.r)
+                if dx is not None:
+                    #Depenetrate
+                    #bg.x -= dx
+                    #bg.y -= dy
+                    #bg.xp -= dx
+                    #bg.yp -= dy
+                    
                     #Bounce
-                    px, py = point_on_line(ballG.xp, ballG.yp, ballG.x, ballG.y, cx, cy)
-                    ballG.xp = px * 2.0 - ballG.xp
-                    ballG.yp = py * 2.0 - ballG.yp
-                    ballG.xp, ballG.x = ballG.x, ballG.xp
-                    ballG.yp, ballG.y = ballG.y, ballG.yp
+                    px, py = point_on_line(bg.xp, bg.yp, bg.x, bg.y, bg.x - dx, bg.y - dy)
+                    bg.xp = px * 2. - bg.xp
+                    bg.yp = py * 2. - bg.yp
+                    bg.xp, bg.x = bg.x, bg.xp
+                    bg.yp, bg.y = bg.y, bg.yp
                     
                     #Gameplay
                     ball.bumps += 1
                     if not block.touched:
                         block.touch()
                         self.addScore()
-                        self.particleSystem.add(particle.Text(px, py, "x%i" %int(self.multiplier)))
-                    self.particleSystem.add(particle.Explosion(px, py))
+                    #    self.particleSystem.add(particle.Text(px, py, "x%i" %int(self.multiplier)))
+                    #self.particleSystem.add(particle.Explosion(px, py))
             
             if self.catcher.rect.colliderect(ball.rect):
-                if self.catcher.geom.hit_circle(ballG.x, ballG.y, ballG.r)[0] is not None:
-                    px, py = point_on_line(ballG.xp, ballG.yp, ballG.x, ballG.y, self.catcher.geom.x, self.catcher.geom.y)
-                    ballG.xp = px * 2.0 - ballG.xp
-                    ballG.yp = py * 2.0 - ballG.yp
+                if self.catcher.geom.hit_circle(bg.x, bg.y, bg.r)[0] is not None:
+                    px, py = point_on_line(bg.xp, bg.yp, bg.x, bg.y, self.catcher.geom.x, self.catcher.geom.y)
+                    bg.xp = px * 2. - bg.xp
+                    bg.yp = py * 2. - bg.yp
                     
-                    ballG.xp, ballG.x = ballG.x, ballG.xp #Invert motion
-                    ballG.yp, ballG.y = ballG.y, ballG.yp
+                    bg.xp, bg.x = bg.x, bg.xp #Invert motion
+                    bg.yp, bg.y = bg.y, bg.yp
                     
                     self.particleSystem.add(particle.Explosion(ball.geom.x, ball.geom.y, 7))
     

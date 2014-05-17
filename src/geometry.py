@@ -1,9 +1,11 @@
+"""Defines a few primitives."""
+
 import itertools
 
-from math import hypot, sin, cos, pi, atan2
+from math import sqrt, hypot, sin, cos, pi, atan2
 
 def minmax(data):
-    """returns (min(data), max(data)) but faster"""
+    """returns (min(data), max(data)) but faster if comparisons are slow"""
     it = iter(data)
     try:
         lo = hi = next(it)
@@ -58,13 +60,17 @@ class Circle(object):
         self.aabb = self.get_aabb()
     
     def hit(self, x, y):
-        if (x - self.x)**2 + (y - self.y)**2 < self.r**2:
+        if (x - self.x) ** 2 + (y - self.y) ** 2 < self.r ** 2:
             return True
         return False
     
     def hit_circle(self, x, y, r):
-        if (x - self.x)**2 + (y - self.y)**2 < (self.r + r)**2:
-            return self.x, self.y
+        square_distance = (x - self.x) ** 2 + (y - self.y) ** 2
+        if square_distance < (self.r + r) ** 2:
+            distance = sqrt(square_distance)
+            penetration = self.r + r - distance
+            return ((self.x - x) / distance * penetration,
+                    (self.y - y) / distance * penetration)
         return None, None
     
     def get_aabb(self):
@@ -80,22 +86,26 @@ class Capsule(object):
         self.aabb = self.get_aabb()
     
     def hit(self, x, y):
-        px, py = point_on_segment(x, y, self.x0, self.y0, self.x1, self.y1)
-        if hypot(x - px, y - py) < self.r:
+        Px, Py = point_on_segment(x, y, self.x0, self.y0, self.x1, self.y1)
+        if (x - Px) ** 2 + (y - Py) ** 2 < self.r ** 2:
             return True
         return False
     
     def hit_circle(self, x, y, r):
-        px, py = point_on_segment(x, y, self.x0, self.y0, self.x1, self.y1)
-        if hypot(x - px, y - py) < self.r + r:
-            return px, py
+        Px, Py = point_on_segment(x, y, self.x0, self.y0, self.x1, self.y1)
+        square_distance = (x - Px) ** 2 + (y - Py) ** 2
+        if square_distance < (self.r + r) ** 2:
+            distance = sqrt(square_distance)
+            penetration = self.r + r - distance
+            return ((Px - x) / distance * penetration,
+                    (Py - y) / distance * penetration)
         return None, None
     
     def get_aabb(self):
         return (min(self.x0, self.x1) - self.r,
                 min(self.y0, self.y1) - self.r,
-                abs(self.x1 - self.x0) + self.r*2.,
-                abs(self.y1 - self.y0) + self.r*2.)
+                abs(self.x1 - self.x0) + self.r * 2.,
+                abs(self.y1 - self.y0) + self.r * 2.)
 
 class Polygon(object):
     def __init__(self, *points):
@@ -120,8 +130,12 @@ class Polygon(object):
     def hit_circle(self, x, y, r):
         for Ax, Ay, Bx, By in self.edges:
             Px, Py = point_on_segment(x, y, Ax, Ay, Bx, By)
-            if (Px - x) ** 2  + (Py - y) ** 2 < r ** 2:
-                return Px, Py
+            square_distance = (x - Px) ** 2 + (y - Py) ** 2
+            if square_distance < r ** 2:
+                distance = sqrt(square_distance)
+                penetration = r - distance
+                return ((Px - x) / distance * penetration,
+                        (Py - y) / distance * penetration)
         
         if self.hit(x, y):
             return x, y
@@ -179,42 +193,40 @@ class Arc(object):
         
         #Problems arise when the arc sweeps degree 0.
         #We make a special case for that.
-        if self._special:
-            self.hit = self.hit_special
-            self.hit_circle = self.hit_special
+        def normal(x, y):
+            a = atan2(y - self.y, x - self.x)
+            return self.angle0 < a < self.angle1
+        def special(x, y):
+            a = atan2(y - self.y, x - self.x)
+            return a < self.angle0 or a > self.angle1
+            
+        self.angular_condition = special if self._special else normal
         
         self.aabb = self.get_aabb()
     
     def hit(self, x, y):
-        if self.r0**2 < (x - self.x)**2 + (y - self.y)**2 < self.r1**2:
-            if self.angle0 < atan2(y - self.y, x - self.x) < self.angle1:
-                return True
-        else:
-            return False
-    
-    def hit_special(self, x, y):
-        if self.r0**2 < (x - self.x)**2 + (y - self.y)**2 < self.r1**2:
-            d = atan2(y - self.y, x - self.x)
-            if d < self.angle0 or d > self.angle1:
+        if self.r0 ** 2 < (x - self.x)**2 + (y - self.y)**2 < self.r1 ** 2:
+            if self.angular_condition(x, y):
                 return True
         else:
             return False
     
     def hit_circle(self, x, y, r):
-        distance = hypot(x - self.x, y - self.y)
-        if self.r0 - r <= distance <= self.r1 + r:
-            u = r / distance / 2.0
-            if self.angle0 <= atan2(y - self.y, x - self.x) <= self.angle1:
-                return self.x, self.y
-        return None, None
-    
-    def hit_circle_special(self, x, y, r):
-        distance = hypot(x - self.x, y - self.y)
-        if self.r0 - r <= distance <= self.r1 + r:
-            u = r / distance / 2.0
-            d = atan2(y - self.y, x - self.x)
-            if d < self.angle0 or d > self.angle1:
-                return self.x, self.y
+        if self.angular_condition(x, y):
+            #Curved borders
+            square_distance = (x - self.x) ** 2 +  (y - self.y) ** 2
+            if (self.r0 - r) ** 2 < square_distance < (self.r1 + r) ** 2:
+                distance = sqrt(square_distance)
+                if distance > (self.r0 + self.r1) / 2.: #Outer border
+                    penetration = self.r1 + r - distance
+                else: #Inner border
+                    penetration = self.r0 - r - distance
+                return ((self.x - x) / distance * penetration,
+                        (self.y - y) / distance * penetration)
+        else:
+            #Sides
+            pass
+        
         return None, None
     
     def get_aabb(self):

@@ -4,7 +4,7 @@ from math import cos, sin, pi, hypot
 import pygame
 
 import render
-from level import Level
+from game import Level
 from geometry import point_on_segment, point_on_circle, \
                      Circle, Capsule, Rectangle, Arc
 
@@ -15,7 +15,7 @@ class Line:
         self.x1 = x1
         self.y1 = y1
         
-        self.subdivisions = 3.0
+        self.subdivisions = 3.
         
         dx = x1 - x0
         dy = y1 - y0
