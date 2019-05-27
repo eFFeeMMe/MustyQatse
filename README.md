@@ -18,7 +18,7 @@ Either way, spit out enough balls, see them fade into the inscrutable void, and 
 
 ## Usage
 
-`python`
+`python mustyqatse.py`
 
 ## Dependencies
 
