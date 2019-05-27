@@ -3,14 +3,14 @@ from math import cos, sin, pi, hypot
 
 import pygame
 
-from src.render import (
+from .render import (
     render_level,
     render_silhouette,
     render_silhouette_multisampled,
-    render_string
+    render_string,
 )
-from src.game import Level
-from src.geometry import (
+from .game import Level
+from .physics.geometry import (
     point_on_segment,
     point_on_circle,
     Circle,
@@ -18,6 +18,10 @@ from src.geometry import (
     Rectangle,
     Arc,
 )
+from . import settings
+
+if settings.ANTIALIASING:
+    render_silhouette = render_silhouette_multisampled
 
 
 class Line:
@@ -292,5 +296,5 @@ class EditorView:
 
         self.mode.draw(display)
         if self.hoveredPlanTouched:
-            display.blit(self.hoveredPlan.hitImage, self.hoveredPlan.rect)
+            display.blit(self.hoveredPlan._hitImage, self.hoveredPlan.rect)
             pygame.draw.circle(display, COLOR1, (self.mx, self.my), 2)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-import sys, gettext
+import sys
+import gettext
 
 kwargs = {}
 gettext.install("mustyqatse", **kwargs)

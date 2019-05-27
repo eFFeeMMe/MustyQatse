@@ -2,20 +2,26 @@ from math import sqrt, hypot, sin, cos, pi, atan2
 
 import pygame
 
-from src.geometry import point_on_line, Circle, Capsule, Rectangle, Arc
-from src.render import (
+from .physics.geometry import point_on_line, Circle, Capsule, Rectangle, Arc
+from .physics.quadtree import QuadTree
+from .render import (
+    COLOR0,
     COLOR1,
     COLOR2,
+    COLOR3,
+    COLOR4,
     render_level,
     render_silhouette,
     render_silhouette_multisampled,
     render_string
 )
-from src.render import COLOR0, COLOR1, COLOR2, COLOR3
-from src.particle import Explosion, ParticleSystem, Text
-from src.event import EventHandler
-from src.quadtree import QuadTree
-from src.menu import sinInterpolation
+from .particle import Explosion, ParticleSystem, Text
+from .event import EventHandler
+from .menu import sinInterpolation
+from . import settings
+
+if settings.ANTIALIASING:
+    render_silhouette = render_silhouette_multisampled
 
 #Dynamics constants
 GRAVITY = 0.04
@@ -54,9 +60,13 @@ class Block:
         self.touched = False
         self.geom = geom
         self.rect = pygame.Rect(geom.aabb)
-        self.image = render_silhouette(geom, COLOR1)
-        self.hitImage = render_silhouette(geom, COLOR2)
+        self._image = render_silhouette(geom, COLOR1)
+        self._hitImage = render_silhouette(geom, COLOR2)
     
+    @property
+    def image(self):
+        return self._hitImage if self.touched else self._image
+
     def touch(self):
         self.touched = True
 

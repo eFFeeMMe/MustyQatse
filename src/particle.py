@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import pygame
 
-from src.menu import sinInterpolation
-from src.render import COLOR0, COLOR1, COLOR2, COLOR3
+from .menu import sinInterpolation
+from .render import COLOR0, COLOR1, COLOR2, COLOR3
 
 
 class ParticleSystem:

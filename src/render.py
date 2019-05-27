@@ -19,33 +19,32 @@ def render_level(display, level):
         pass
 
     for block in level.blocks:
-        image = block.hitImage if block.touched else block.image
-        display.blit(image, block.rect)
+        display.blit(block.image, block.rect)
 
 
 def render_silhouette(shape, color):
     x0, y0, w, h = (int(val) for val in shape.aabb)
-    image = pygame.Surface((w, h), pygame.SRCALPHA, 32)
-    colorArray = pygame.surfarray.pixels3d(image)
-    alphaArray = pygame.surfarray.pixels_alpha(image)
+    surface = pygame.Surface((w, h), pygame.SRCALPHA, 32)
+    colorArray = pygame.surfarray.pixels3d(surface)
+    alphaArray = pygame.surfarray.pixels_alpha(surface)
     for x in range(w):
         for y in range(h):
             if shape.hit(x0 + x, y0 + y):
                 colorArray[x][y] = color
                 alphaArray[x][y] = 255
 
-    return image
+    return surface
 
 
 def render_silhouette_multisampled(shape, color):
     x0, y0, w, h = (int(val) for val in shape.aabb)
-    image = pygame.Surface((w, h), pygame.SRCALPHA, 32)
-    colorArray = pygame.surfarray.pixels3d(image)
-    alphaArray = pygame.surfarray.pixels_alpha(image)
+    surface = pygame.Surface((w, h), pygame.SRCALPHA, 32)
+    colorArray = pygame.surfarray.pixels3d(surface)
+    alphaArray = pygame.surfarray.pixels_alpha(surface)
     for x in range(w * 2):
         for y in range(h * 2):
             if shape.hit(x0 + x / 2.0, y0 + y / 2.0):
-                hurray[x // 2][y // 2][0:3] = color
-                hurray[x // 2][y // 2][3] += 255 // 4
+                colorArray[x // 2][y // 2][0:3] = color
+                alphaArray[x // 2][y // 2][3] += 255 // 4
 
-    return image
+    return surface
