@@ -2,25 +2,12 @@ from math import cos, sin, pi, hypot
 
 import pygame
 
-from .render import (
-    render_level,
-    render_silhouette,
-    render_silhouette_multisampled,
-    render_string,
-)
+from .render import render_string
 from .game import Level
-from .physics.geometry import (
-    point_on_segment,
-    point_on_circle,
-    Circle,
-    Capsule,
-    Rectangle,
-    Arc,
-)
+from .physics.geometry import point_on_segment, point_on_circle
+from .physics.primitives import Circle, Capsule, Rectangle, Arc
 from . import settings
-
-if settings.ANTIALIASING:
-    render_silhouette = render_silhouette_multisampled
+from .settings import COLOR0, COLOR1, COLOR2, COLOR3, COLOR4
 
 
 class Line:

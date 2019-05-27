@@ -1,7 +1,7 @@
 import pygame
 
 from .menu import sinInterpolation
-from .render import COLOR0, COLOR1, COLOR2, COLOR3
+from .settings import COLOR0, COLOR1, COLOR2, COLOR3
 
 
 class ParticleSystem:
