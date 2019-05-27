@@ -1,6 +1,6 @@
 # Mustyqatse
 
-MustyQatse is a game inspired by Peggle but not quite like it.
+MustyQatse is a game inspired by Peggle and successful in wholly different ways.
 
 ## How to play
 

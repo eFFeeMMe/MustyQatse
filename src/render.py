@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import pygame
 
 COLOR0 = 255, 255, 255
@@ -45,6 +44,6 @@ def render_silhouette_multisampled(shape, color):
         for y in range(h * 2):
             if shape.hit(x0 + x / 2.0, y0 + y / 2.0):
                 colorArray[x // 2][y // 2][0:3] = color
-                alphaArray[x // 2][y // 2][3] += 255 // 4
+                alphaArray[x // 2][y // 2] += 255 // 4
 
     return surface

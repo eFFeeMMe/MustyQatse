@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Examples at the end of the module"""
 
 

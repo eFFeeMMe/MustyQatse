@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from math import cos, sin, pi, hypot
 
 import pygame
