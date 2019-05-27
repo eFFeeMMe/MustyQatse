@@ -2,13 +2,20 @@ from math import sqrt, hypot, sin, cos, pi, atan2
 
 import pygame
 
-from geometry import point_on_line, Circle, Capsule, Rectangle, Arc
-import render
-from render import COLOR0, COLOR1, COLOR2, COLOR3
-import particle
-from event import EventHandler
-from quadtree import QuadTree
-from menu import sinInterpolation
+from src.geometry import point_on_line, Circle, Capsule, Rectangle, Arc
+from src.render import (
+    COLOR1,
+    COLOR2,
+    render_level,
+    render_silhouette,
+    render_silhouette_multisampled,
+    render_string
+)
+from src.render import COLOR0, COLOR1, COLOR2, COLOR3
+from src.particle import Explosion, ParticleSystem, Text
+from src.event import EventHandler
+from src.quadtree import QuadTree
+from src.menu import sinInterpolation
 
 #Dynamics constants
 GRAVITY = 0.04
@@ -28,7 +35,7 @@ class GUI(object):
     @score.setter
     def score(self, x):
         self._score = x
-        self.score_image = render.string("Score: %i" %self.score, COLOR1)
+        self.score_image = render_string("Score: %i" %self.score, COLOR1)
     
     @property
     def balls(self):
@@ -36,7 +43,7 @@ class GUI(object):
     @balls.setter
     def balls(self, x):
         self._balls = x
-        self.balls_image = render.string("Balls: %i" %self.balls, COLOR1)
+        self.balls_image = render_string("Balls: %i" %self.balls, COLOR1)
     
     def draw(self, display):
         display.blit(self.score_image, (self.x, self.y))
@@ -47,8 +54,8 @@ class Block:
         self.touched = False
         self.geom = geom
         self.rect = pygame.Rect(geom.aabb)
-        self.image = render.silhouette(geom, render.COLOR1)
-        self.hitImage = render.silhouette(geom, render.COLOR2)
+        self.image = render_silhouette(geom, COLOR1)
+        self.hitImage = render_silhouette(geom, COLOR2)
     
     def touch(self):
         self.touched = True
@@ -96,7 +103,7 @@ class Ball(object):
         geom.yp = y
         
         self.rect = pygame.Rect(geom.aabb)
-        self.image = render.silhouette(geom, COLOR3)
+        self.image = render_silhouette(geom, COLOR3)
     
     def accelerate(self, multiplier):
         geom = self.geom
@@ -129,7 +136,7 @@ class Emitter:
     def __init__(self, x, y, r=12):
         self.geom = Circle(x, y, r)
         self.rect = pygame.Rect(self.geom.aabb)
-        self.image = render.silhouette(self.geom, COLOR3)
+        self.image = render_silhouette(self.geom, COLOR3)
     
     def draw(self, display):
         display.blit(self.image, self.rect)
@@ -149,7 +156,7 @@ class Catcher:
         self.fix = .1
         
         self.rect = pygame.Rect(geom.aabb)
-        self.image = render.silhouette(geom, COLOR3)
+        self.image = render_silhouette(geom, COLOR3)
     
     def update(self):
         geom = self.geom
@@ -167,7 +174,7 @@ class Game(EventHandler):
         
         self.GUI = GUI(50, 50)
         
-        self.particleSystem = particle.ParticleSystem()
+        self.particleSystem = ParticleSystem()
         
         self.level = Level()
         
@@ -232,7 +239,7 @@ class Game(EventHandler):
             self.lose()
         
         for block in blocksToRemove:
-            self.particleSystem.add(particle.Explosion(block.rect.centerx, block.rect.centery, 18))
+            self.particleSystem.add(Explosion(block.rect.centerx, block.rect.centery, 18))
         if self.level.blocks and blocksToRemove:
             self.level.quadTree = QuadTree(items=self.level.blocks)
         
@@ -274,8 +281,8 @@ class Game(EventHandler):
                     if not block.touched:
                         block.touch()
                         self.addScore()
-                    #    self.particleSystem.add(particle.Text(px, py, "x%i" %int(self.multiplier)))
-                    #self.particleSystem.add(particle.Explosion(px, py))
+                    #    self.particleSystem.add(Text(px, py, "x%i" %int(self.multiplier)))
+                    #self.particleSystem.add(Explosion(px, py))
             
             if self.catcher.rect.colliderect(ball.rect):
                 if self.catcher.geom.hit_circle(bg.x, bg.y, bg.r)[0] is not None:
@@ -286,7 +293,7 @@ class Game(EventHandler):
                     bg.xp, bg.x = bg.x, bg.xp #Invert motion
                     bg.yp, bg.y = bg.y, bg.yp
                     
-                    self.particleSystem.add(particle.Explosion(ball.geom.x, ball.geom.y, 7))
+                    self.particleSystem.add(Explosion(ball.geom.x, ball.geom.y, 7))
     
     def update(self):
         self.updateDynamics()
@@ -302,7 +309,7 @@ class Game(EventHandler):
             elif ball.bumps > ball.max_bumps:
                 deadBalls.add(ball)
         for ball in deadBalls:
-            self.particleSystem.add(particle.Explosion(ball.geom.x, ball.geom.y, 18))
+            self.particleSystem.add(Explosion(ball.geom.x, ball.geom.y, 18))
         self.balls -= deadBalls
         if deadBalls and len(self.balls) == 0:
             self.newTurn()
@@ -310,7 +317,7 @@ class Game(EventHandler):
     def draw(self, display):
         display.fill(COLOR0)
         
-        render.level(display, self.level)
+        render_level(display, self.level)
         
         self.emitter.draw(display)
         self.catcher.draw(display)
