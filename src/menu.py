@@ -3,7 +3,7 @@ from math import sin, cos, pi
 
 import pygame
 
-from src.render import COLOR0, COLOR1, COLOR2, COLOR3
+from .settings import COLOR0, COLOR1, COLOR2, COLOR3
 
 
 def sinInterpolation(start, end, steps=30):

@@ -1,23 +1,13 @@
-#!/usr/bin/env python
 from math import cos, sin, pi, hypot
 
 import pygame
 
-from src.render import (
-    render_level,
-    render_silhouette,
-    render_silhouette_multisampled,
-    render_string
-)
-from src.game import Level
-from src.geometry import (
-    point_on_segment,
-    point_on_circle,
-    Circle,
-    Capsule,
-    Rectangle,
-    Arc,
-)
+from .render import render_string
+from .game import Level
+from .physics.geometry import point_on_segment, point_on_circle
+from .physics.primitives import Circle, Capsule, Rectangle, Arc
+from . import settings
+from .settings import COLOR0, COLOR1, COLOR2, COLOR3, COLOR4
 
 
 class Line:
@@ -292,5 +282,5 @@ class EditorView:
 
         self.mode.draw(display)
         if self.hoveredPlanTouched:
-            display.blit(self.hoveredPlan.hitImage, self.hoveredPlan.rect)
+            display.blit(self.hoveredPlan._hitImage, self.hoveredPlan.rect)
             pygame.draw.circle(display, COLOR1, (self.mx, self.my), 2)
