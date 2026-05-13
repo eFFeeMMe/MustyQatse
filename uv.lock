@@ -18,8 +18,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "numpy", specifier = ">=1.6.2" },
-    { name = "pygame", specifier = "==2.6.1" },
+    { name = "numpy", specifier = "~=2.4.4" },
+    { name = "pygame", specifier = "~=2.6.1" },
 ]
 
 [package.metadata.requires-dev]
