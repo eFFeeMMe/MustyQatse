@@ -14,14 +14,20 @@ Either way, spit out enough balls, see them fade into the inscrutable void, and 
 
 ## Installation
 
-`pip install -r requirements.txt`
+`uv sync`
+
+## Update dependencies
+
+Update the dependency at the desired version in `pyproject.toml` then run:
+
+`uv lock`
 
 ## Usage
 
-`python mustyqatse.py`
+`uv run main.py`
 
 ## Dependencies
 
-- python3.6
+- python3.12
 - pygame
 - numpy
