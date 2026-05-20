@@ -13,10 +13,10 @@ from src.editor import Editor
 class Main(EventHandler):
     def __init__(self):
         pygame.init()
-        
+
         self.display = pygame.display.set_mode((960, 540))
         self.clock = pygame.time.Clock()
-        
+
         #Then the custom event handling
         self.events = [      #Arguments:
             'keyDown',         #unicode, key, mod
@@ -26,9 +26,9 @@ class Main(EventHandler):
             'mouseButtonUp',   #pos, button
             'quit',            #no variables
             ]
-        
+
         self.register(*self.events)
-        
+
         #Then the main menu
         noAction = lambda: None
         menuItems = {
@@ -44,11 +44,11 @@ class Main(EventHandler):
                 "Load Level": noAction,
             },
         }
-        
+
         self.menu = RotatingMenu(self, x=480, y=270, w=700, h=400, arc=pi, defaultAngle=pi/2., wrap=False, headerText="Mustyqatse", items=menuItems, on_selection=self.menu_select, backText="Back")
-        
+
         self.context = self.menu
-    
+
     def update(self):
         for e in pygame.event.get():
             if e.type == pygame.KEYDOWN:
@@ -63,47 +63,47 @@ class Main(EventHandler):
                 self.emit('mouseButtonUp', e.pos, e.button)
             elif e.type == pygame.QUIT:
                 self.emit('quit')
-            
+
         self.context.update()
         self.context.draw(self.display)
-        
+
         pygame.display.flip()
         self.clock.tick(60) #Limit FPS
-    
+
     #Menu
     def menu_select(self, menu):
         self.context = menu
-    
+
     def on_menu_game(self):
         game = Game(self)
         game.win = self.win
         game.lose = self.lose
         self.context = game
         game.start()
-    
+
     def menuLevels(self):
         pass
-    
+
     def menuEditor(self):
         editor = Editor(self)
         editor.back = self.menuBack
         self.context = editor
-    
+
     def on_menu_exit(self):
         return sys.exit()
-    
+
     #Options Menu
     def optionsResolution(self):
         pass
-    
+
     def optionsFPSLimit(self):
         pass
-    
+
     #Game
     def win(self):
         self.context = self.menu
         self.menu.header.text = choice(text.on_win)
-    
+
     def lose(self):
         self.context = self.menu
         self.menu.header.text = choice(text.on_lose)
